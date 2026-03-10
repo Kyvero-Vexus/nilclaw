@@ -5,12 +5,17 @@ Owner: Human (top-level authority), executed by agents
 
 ## Purpose
 
-Define a strict, version-controlled authority hierarchy for how NilClaw is specified, tested, and implemented.
+Define a strict, version-controlled authority hierarchy for how product behavior is specified, tested, and implemented.
 
 Core principle:
 - **Meaning is concentrated at the top.**
 - **Volume and literal detail increase downward.**
 - **Lower layers must trace back to higher layers.**
+
+Meta governance rule:
+- Keep **product specs** separate from **meta/specops specs**.
+- Product truth lives under `specs/product/`.
+- Governance/templates live under `specs/meta/`.
 
 ---
 
@@ -21,6 +26,8 @@ Core principle:
 Human-owned, frozen-by-default.
 
 Contents:
+- Feature truths (`F-*`): what the product must provide
+- Constraint truths (`C-*`): invariant boundaries the product must obey
 - Core behavioral truths (what NilClaw must do)
 - Key technical attributes (runtime invariants, language constraints, foundational properties)
 - Usage metaphors (core symbolic objects and interaction model)
@@ -201,10 +208,18 @@ Rule:
 
 ## Relationship to Existing NilClaw Assets
 
-Existing:
-- Behavioral specs: `specs/extracted/`
-- Adapted references: `specs/nullclaw-adapted/`
+Existing (product side):
+- L0 product truths: `specs/product/l0/`
+  - includes `L0-feature-catalog.md` and `L0-constraint-catalog.md`
+- Behavioral specs: `specs/product/extracted/`
+- Adapted references: `specs/product/adapted/`
 - Behavioral test specs: `tests/specs/`
 - Planned E2E test specs: beads created under `nilclaw-54s` children
+
+Existing (meta side):
+- This governance doc: `specs/meta/SPECOPS-SOURCE-OF-TRUTH.md`
+- Reusable templates: `specs/meta/templates/`
+
+Compatibility symlinks may exist at legacy paths under `specs/`.
 
 This document governs how those artifacts evolve.
