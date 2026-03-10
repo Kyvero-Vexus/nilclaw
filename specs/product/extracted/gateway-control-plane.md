@@ -1,3 +1,13 @@
+---
+Layer: L1
+Lane: contracts
+Spec ID: L1-EXT-gateway-control-plane
+Status: draft
+Last Updated: 2026-03-10
+Traceability:
+  L0: [F-UI-GATEWAY, F-CH-WEBHOOK, C-SEC-AUTH-BOUNDARY, C-REL-TIMEOUT-RETRY]
+---
+
 # Gateway & Control Plane Specification
 
 ## Overview

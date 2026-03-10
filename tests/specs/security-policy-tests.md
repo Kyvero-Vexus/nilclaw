@@ -1,3 +1,14 @@
+---
+Layer: L2
+Lane: unit
+Spec ID: L2-UNIT-security-policy-tests
+Status: draft
+Last Updated: 2026-03-10
+Traceability:
+  L1: [L1-EXT-security-sandboxing, L1-SEC-baseline-security]
+  L0: [C-SEC-POLICY-ENFORCEMENT, C-SEC-SANDBOX-BOUNDARY, C-SAFE-PRIORITY]
+---
+
 # Security Policy Test Specifications
 
 ## Overview

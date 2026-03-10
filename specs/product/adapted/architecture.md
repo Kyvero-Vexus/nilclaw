@@ -1,3 +1,13 @@
+---
+Layer: L1
+Lane: architecture
+Spec ID: L1-ADP-architecture
+Status: draft
+Last Updated: 2026-03-10
+Traceability:
+  L0: [F-UI-GATEWAY, F-AGENT-SESSIONS]
+---
+
 # Architecture Specification (Adapted from NullClaw docs)
 
 > Frozen reference — do not modify. Source: NullClaw docs/en/architecture.md

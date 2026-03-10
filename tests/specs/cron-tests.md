@@ -1,3 +1,14 @@
+---
+Layer: L2
+Lane: integration
+Spec ID: L2-INT-cron-tests
+Status: draft
+Last Updated: 2026-03-10
+Traceability:
+  L1: [L1-EXT-cron-heartbeat, L1-OPS-baseline-operations]
+  L0: [F-AGENT-SCHEDULING, C-REL-TIMEOUT-RETRY]
+---
+
 # Cron Test Specifications
 
 ## Overview

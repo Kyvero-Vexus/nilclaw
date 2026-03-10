@@ -1,3 +1,13 @@
+---
+Layer: L1
+Lane: contracts
+Spec ID: L1-EXT-tool-system
+Status: draft
+Last Updated: 2026-03-10
+Traceability:
+  L0: [F-CAP-TOOLS, C-SEC-POLICY-ENFORCEMENT, C-SAFE-EXTERNAL-ACTION-GATING]
+---
+
 # Tool System Specification
 
 ## Overview

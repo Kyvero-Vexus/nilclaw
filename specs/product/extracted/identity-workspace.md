@@ -1,3 +1,13 @@
+---
+Layer: L1
+Lane: engineering-policy
+Spec ID: L1-EXT-identity-workspace
+Status: draft
+Last Updated: 2026-03-10
+Traceability:
+  L0: [F-AGENT-SESSIONS, F-MEM-PERSISTENCE, C-CONFIG-EXPLICITNESS]
+---
+
 # Identity & Workspace Files Specification
 
 ## Overview

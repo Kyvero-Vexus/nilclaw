@@ -1,3 +1,13 @@
+---
+Layer: L1
+Lane: contracts
+Spec ID: L1-EXT-mcp-client
+Status: draft
+Last Updated: 2026-03-10
+Traceability:
+  L0: [F-CAP-MCP, F-CAP-TOOLS, C-REL-DEGRADATION]
+---
+
 # MCP Client Specification
 
 ## Overview

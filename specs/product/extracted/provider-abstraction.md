@@ -1,3 +1,13 @@
+---
+Layer: L1
+Lane: compatibility
+Spec ID: L1-EXT-provider-abstraction
+Status: draft
+Last Updated: 2026-03-10
+Traceability:
+  L0: [F-LLM-MULTIPROVIDER, F-LLM-COMPAT, C-REL-TIMEOUT-RETRY]
+---
+
 # Provider Abstraction & Multi-Model Specification
 
 ## Overview

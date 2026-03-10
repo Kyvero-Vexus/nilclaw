@@ -1,3 +1,13 @@
+---
+Layer: L1
+Lane: reliability
+Spec ID: L1-EXT-memory-system
+Status: draft
+Last Updated: 2026-03-10
+Traceability:
+  L0: [F-MEM-PERSISTENCE, F-MEM-RECALL, C-REL-DEGRADATION]
+---
+
 # Memory System Specification
 
 ## Overview

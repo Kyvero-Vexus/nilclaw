@@ -1,3 +1,13 @@
+---
+Layer: L1
+Lane: contracts
+Spec ID: L1-EXT-channel-system
+Status: draft
+Last Updated: 2026-03-10
+Traceability:
+  L0: [F-CH-MULTICHANNEL, F-ROUTING-AGENT, C-SAFE-EXTERNAL-ACTION-GATING]
+---
+
 # Channel System Specification
 
 ## Overview

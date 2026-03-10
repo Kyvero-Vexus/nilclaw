@@ -1,3 +1,13 @@
+---
+Layer: L1
+Lane: operations
+Spec ID: L1-EXT-cron-heartbeat
+Status: draft
+Last Updated: 2026-03-10
+Traceability:
+  L0: [F-AGENT-SCHEDULING, C-REL-TIMEOUT-RETRY]
+---
+
 # Cron & Heartbeat Specification
 
 ## Overview

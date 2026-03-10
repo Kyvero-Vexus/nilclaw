@@ -1,3 +1,14 @@
+---
+Layer: L2
+Lane: unit
+Spec ID: L2-UNIT-bootstrap-tests
+Status: draft
+Last Updated: 2026-03-10
+Traceability:
+  L1: [L1-EXT-identity-workspace]
+  L0: [F-AGENT-SESSIONS, F-MEM-PERSISTENCE]
+---
+
 # Bootstrap Provider Test Specifications
 
 ## Overview

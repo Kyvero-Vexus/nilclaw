@@ -1,3 +1,14 @@
+---
+Layer: L2
+Lane: compatibility
+Spec ID: L2-COMP-providers-compatible-tests
+Status: draft
+Last Updated: 2026-03-10
+Traceability:
+  L1: [L1-EXT-provider-abstraction, L1-COMP-baseline-compatibility]
+  L0: [F-LLM-COMPAT, F-LLM-MULTIPROVIDER, C-REL-TIMEOUT-RETRY]
+---
+
 # Providers Compatible (OpenAI-Compatible) Test Specifications
 
 ## Overview

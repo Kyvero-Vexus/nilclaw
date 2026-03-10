@@ -1,3 +1,13 @@
+---
+Layer: L1
+Lane: operations
+Spec ID: L1-ADP-commands
+Status: draft
+Last Updated: 2026-03-10
+Traceability:
+  L0: [F-UI-CLI, F-CONFIG-MUTABILITY]
+---
+
 # Commands Specification (Adapted from NullClaw docs)
 
 > Frozen reference — do not modify. Source: NullClaw docs/en/commands.md

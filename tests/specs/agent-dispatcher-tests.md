@@ -1,3 +1,14 @@
+---
+Layer: L2
+Lane: unit
+Spec ID: L2-UNIT-agent-dispatcher-tests
+Status: draft
+Last Updated: 2026-03-10
+Traceability:
+  L1: [L1-EXT-tool-system]
+  L0: [F-CAP-TOOLS, C-SEC-POLICY-ENFORCEMENT]
+---
+
 # Agent Dispatcher Test Specifications
 
 ## Overview

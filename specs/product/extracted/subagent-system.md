@@ -1,3 +1,13 @@
+---
+Layer: L1
+Lane: architecture
+Spec ID: L1-EXT-subagent-system
+Status: draft
+Last Updated: 2026-03-10
+Traceability:
+  L0: [F-AGENT-SUBAGENTS, F-AGENT-SESSIONS, C-SAFE-PRIORITY]
+---
+
 # Sub-Agent System Specification
 
 ## Overview

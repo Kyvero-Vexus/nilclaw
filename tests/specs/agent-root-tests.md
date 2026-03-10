@@ -1,3 +1,14 @@
+---
+Layer: L2
+Lane: unit
+Spec ID: L2-UNIT-agent-root-tests
+Status: draft
+Last Updated: 2026-03-10
+Traceability:
+  L1: [L1-EXT-agent-core, L1-BHV-nullclaw-baseline-feature-mapping]
+  L0: [F-AGENT-SESSIONS, F-UI-CLI, C-SAFE-PRIORITY]
+---
+
 # Agent Root Test Specifications
 
 ## Overview

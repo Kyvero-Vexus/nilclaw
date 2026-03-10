@@ -1,3 +1,13 @@
+---
+Layer: L1
+Lane: behavior-e2e
+Spec ID: L1-EXT-agent-core
+Status: draft
+Last Updated: 2026-03-10
+Traceability:
+  L0: [F-UI-CLI, F-AGENT-SESSIONS, F-ROUTING-AGENT, C-SAFE-PRIORITY]
+---
+
 # Agent Core & Session Management Specification
 
 ## Overview

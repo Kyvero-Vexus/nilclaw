@@ -1,3 +1,13 @@
+---
+Layer: L1
+Lane: behavior-e2e
+Spec ID: L1-EXT-streaming-voice
+Status: draft
+Last Updated: 2026-03-10
+Traceability:
+  L0: [F-UI-STREAMING, F-AGENT-SESSIONS, C-REL-DEGRADATION]
+---
+
 # Streaming & Voice Specification
 
 ## Overview

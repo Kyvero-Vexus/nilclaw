@@ -1,3 +1,13 @@
+---
+Layer: L1
+Lane: operations
+Spec ID: L1-EXT-skills-system
+Status: draft
+Last Updated: 2026-03-10
+Traceability:
+  L0: [F-CAP-SKILLS, F-CONFIG-MUTABILITY, C-CONFIG-EXPLICITNESS]
+---
+
 # Skills System Specification
 
 ## Overview

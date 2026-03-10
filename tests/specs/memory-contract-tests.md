@@ -1,3 +1,14 @@
+---
+Layer: L2
+Lane: integration
+Spec ID: L2-INT-memory-contract-tests
+Status: draft
+Last Updated: 2026-03-10
+Traceability:
+  L1: [L1-EXT-memory-system, L1-REL-baseline-reliability]
+  L0: [F-MEM-PERSISTENCE, F-MEM-RECALL, C-REL-DEGRADATION]
+---
+
 # Memory Engine Contract Test Specifications
 
 ## Overview

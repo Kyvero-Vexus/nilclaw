@@ -1,3 +1,13 @@
+---
+Layer: L1
+Lane: contracts
+Spec ID: L1-ADP-gateway-api
+Status: draft
+Last Updated: 2026-03-10
+Traceability:
+  L0: [F-UI-GATEWAY, F-CH-WEBHOOK, C-SEC-AUTH-BOUNDARY]
+---
+
 # Gateway API Specification (Adapted from NullClaw docs)
 
 > Frozen reference — do not modify. Source: NullClaw docs/en/gateway-api.md

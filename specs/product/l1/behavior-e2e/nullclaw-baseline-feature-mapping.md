@@ -1,10 +1,14 @@
-# NullClaw Baseline Feature Mapping (L1)
+---
+Layer: L1
+Lane: behavior-e2e
+Spec ID: L1-BHV-nullclaw-baseline-feature-mapping
+Status: draft
+Last Updated: 2026-03-10
+Traceability:
+  L0: [C-CONFIG-EXPLICITNESS, C-REL-DEGRADATION, C-REL-TIMEOUT-RETRY, C-SAFE-EXTERNAL-ACTION-GATING, C-SAFE-PRIORITY, C-SEC-AUTH-BOUNDARY, C-SEC-POLICY-ENFORCEMENT, C-SEC-SANDBOX-BOUNDARY, C-SEC-SECRET-HANDLING, C-TEST-TRACEABILITY, F-AGENT-SCHEDULING, F-AGENT-SESSIONS, F-AGENT-SUBAGENTS, F-CAP-MCP, F-CAP-SKILLS, F-CAP-TOOLS, F-CH-MULTICHANNEL, F-CH-WEBHOOK, F-CONFIG-MUTABILITY, F-LLM-COMPAT, F-LLM-MULTIPROVIDER, F-MEM-PERSISTENCE, F-MEM-RECALL, F-ROUTING-AGENT, F-UI-CLI, F-UI-GATEWAY, F-UI-STREAMING, F-UI-TERMINAL-CLIENT]
+---
 
-- **Layer:** L1
-- **Lane:** behavior-e2e
-- **Spec ID:** L1-BHV-nullclaw-baseline-feature-mapping
-- **Status:** draft
-- **Last Updated:** 2026-03-10
+# NullClaw Baseline Feature Mapping (L1)
 
 ## Purpose
 Map L0 feature truths to concrete L1 behavioral spec surfaces currently available in NilClaw spec corpus.

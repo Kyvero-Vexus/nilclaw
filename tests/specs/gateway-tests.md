@@ -1,3 +1,14 @@
+---
+Layer: L2
+Lane: integration
+Spec ID: L2-INT-gateway-tests
+Status: draft
+Last Updated: 2026-03-10
+Traceability:
+  L1: [L1-EXT-gateway-control-plane, L1-CON-baseline-contracts]
+  L0: [F-UI-GATEWAY, F-CH-WEBHOOK, C-SEC-AUTH-BOUNDARY]
+---
+
 # Gateway Test Specifications
 
 ## Overview

@@ -1,3 +1,14 @@
+---
+Layer: L2
+Lane: unit
+Spec ID: L2-UNIT-config-tests
+Status: draft
+Last Updated: 2026-03-10
+Traceability:
+  L1: [L1-EXT-configuration, L1-ENG-baseline-engineering-policy]
+  L0: [F-CONFIG-MUTABILITY, C-CONFIG-EXPLICITNESS]
+---
+
 # Config Test Specifications
 
 ## Overview
