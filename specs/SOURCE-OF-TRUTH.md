@@ -152,10 +152,39 @@ Interpretation:
 
 ---
 
+## L1 Lanes (System Design Specification Categories)
+
+To reduce blind spots, L1 is subdivided into lanes:
+
+- `specs/l1/behavior-e2e/` — externally observable behavior and journey-level E2E intent
+- `specs/l1/architecture/` — module boundaries, interfaces, composition rules
+- `specs/l1/engineering-policy/` — typing, libraries, style, implementation constraints
+- `specs/l1/testing-policy/` — test taxonomy, pass criteria, flake policy, quality gates
+- `specs/l1/reliability/` — SLOs, error budgets, retry/timeout policy
+- `specs/l1/security/` — threat model, trust boundaries, required controls
+- `specs/l1/contracts/` — data contracts (config/session/memory/events), schema/versioning
+- `specs/l1/compatibility/` — migration and backward/forward compatibility guarantees
+- `specs/l1/observability/` — logs/metrics/traces and redaction requirements
+- `specs/l1/operations/` — release/deploy/rollback/incident operation specs
+
+## L2 Lanes (Test Specification Categories)
+
+L2 is subdivided by validation type:
+
+- `tests/specs/unit/`
+- `tests/specs/integration/`
+- `tests/specs/e2e/`
+- `tests/specs/failure-injection/`
+- `tests/specs/compatibility/`
+- `tests/specs/operations-drills/`
+
+Rule:
+- Every L2 spec must trace back to one or more L1/L0 clauses.
+
 ## Immediate Next Iterations
 
-1. Define template set for L1 specs (progressively strict variants).
-2. Define template set for L2 specs (unit/integration/e2e-manual/e2e-automated).
+1. Define template set for L1 lanes (progressively strict variants).
+2. Define template set for L2 lanes (including manual vs automated E2E split).
 3. Add traceability ID convention and backfill current specs/tests.
 4. Add CI checks for missing trace links.
 5. Add E2E automation strategy matrix (fully auto / semi-auto / manual verified).
