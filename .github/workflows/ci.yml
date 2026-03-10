@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install SBCL and dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sbcl cl-alexandria cl-json cl-ppcre python3
+
+      - name: Install Quicklisp
+        run: |
+          curl -sO https://beta.quicklisp.org/quicklisp.lisp
+          sbcl --noinform --non-interactive \
+            --load quicklisp.lisp \
+            --eval '(quicklisp-quickstart:install)' \
+            --eval '(ql:add-to-init-file)'
+
+      - name: Install FiveAM
+        run: |
+          sbcl --noinform --non-interactive \
+            --eval '(ql:quickload :fiveam)'
+
+      - name: Load system
+        run: make load
+
+      - name: Run tests
+        run: make test
+
+      - name: Validate traceability
+        run: make traceability
