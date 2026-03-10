@@ -3,6 +3,7 @@
 These documents are the top authority for NilClaw intent.
 
 Current L0 set:
+- `L0-feature-catalog.md`
 - `L0-behavioral-truth.md`
 - `L0-key-technical-attributes.md`
 - `L0-usage-metaphors.md`
