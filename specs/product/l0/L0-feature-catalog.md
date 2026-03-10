@@ -13,7 +13,7 @@ This catalog defines top-level product features NilClaw must provide (baseline f
 
 ### Interface & Interaction Features
 - **F-UI-TERMINAL:** NilClaw MUST provide an interactive terminal interface (TUI/REPL) for direct use.
-- **F-UI-GATEWAY:** NilClaw MUST provide a gateway interface for non-terminal integrations.
+- **F-UI-GATEWAY:** NilClaw MUST provide a gateway control plane runtime that hosts core services and exposes non-terminal integrations.
 - **F-UI-STREAMING:** NilClaw MUST support streamed assistant responses where configured.
 
 ### Agent Runtime Features
@@ -50,3 +50,7 @@ This catalog defines top-level product features NilClaw must provide (baseline f
 ## Change Control
 L0 is human-owned and frozen-by-default.
 Changes require explicit human request.
+
+
+### Feature Boundary Note
+- `F-UI-GATEWAY` refers to the runtime control plane capability itself (core runtime authority + integration surfaces), not only an external-facing HTTP adapter.

@@ -17,6 +17,9 @@ Define the symbolic objects users and developers reason with when using NilClaw.
 - T5: Beads/tasks are a primary metaphor for work decomposition and progress tracking.
 - T6: Spec pyramid is a primary metaphor for authority flow: L0 intention -> L1 design -> L2 test specs -> L3 tests -> L4 implementation.
 
+- T7: Gateway is a primary metaphor: the long-running control plane process that hosts core runtime services (session orchestration, API endpoints, channel/webhook ingress, auth/policy enforcement, scheduling hooks).
+- T8: Terminal UI (TUI/REPL) is a client metaphor: it connects to or invokes gateway-managed runtime behavior; it is not the runtime authority itself.
+
 ## Optional Additional Sections
 ### Terminology Guardrails
 - “Behavioral parity” means parity of externally observable outcomes, not implementation language parity.
@@ -31,3 +34,9 @@ Define the symbolic objects users and developers reason with when using NilClaw.
 ## Change Control
 L0 is human-owned and frozen-by-default.
 Changes require explicit human request.
+
+
+### Gateway Clarification
+- In NilClaw, **gateway** means the runtime control plane process, not merely an optional external API plugin.
+- External interfaces (HTTP/webhooks/channels) are exposed through gateway surfaces, but core runtime coordination is also gateway-owned.
+- If a local/direct execution mode exists, it is treated as a gateway-embedded or gateway-compatible path, not a separate authority model.
