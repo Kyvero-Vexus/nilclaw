@@ -89,4 +89,5 @@
      (:file "bootstrap-tests")
      (:file "cron-tests")
      (:file "gateway-tests")
-     (:file "agent-root-tests")))))
+     (:file "agent-root-tests")
+     (:file "traceability-linkage-tests")))))

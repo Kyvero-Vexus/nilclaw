@@ -51,6 +51,10 @@
   :description "Agent root module tests"
   :in nilclaw-suite)
 
+(def-suite traceability-linkage-suite
+  :description "Traceability linkage tests"
+  :in nilclaw-suite)
+
 (defun run-nilclaw-tests ()
   "Run all NilClaw tests and return results."
   (run! 'nilclaw-suite))

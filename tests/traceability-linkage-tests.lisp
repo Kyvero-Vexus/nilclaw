@@ -1,0 +1,36 @@
+(in-package #:nilclaw/tests)
+
+(in-suite traceability-linkage-suite)
+
+(defun file-exists-p* (path)
+  (not (null (probe-file path))))
+
+(test l1-spec-artifacts-exist
+  (is (file-exists-p* "specs/product/extracted/channel-system.md"))
+  (is (file-exists-p* "specs/product/extracted/mcp-client.md"))
+  (is (file-exists-p* "specs/product/extracted/subagent-system.md"))
+  (is (file-exists-p* "specs/product/extracted/streaming-voice.md"))
+  (is (file-exists-p* "specs/product/adapted/configuration.md"))
+  (is (file-exists-p* "specs/product/adapted/gateway-api.md"))
+  (is (file-exists-p* "specs/product/adapted/commands.md"))
+  (is (file-exists-p* "specs/product/adapted/security.md"))
+  (is (file-exists-p* "specs/product/adapted/architecture.md"))
+  (is (file-exists-p* "specs/product/adapted/usage.md"))
+  (is (file-exists-p* "specs/product/l1/architecture/nullclaw-baseline-architecture-index.md"))
+  (is (file-exists-p* "specs/product/l1/testing-policy/baseline-testing-policy.md"))
+  (is (file-exists-p* "specs/product/l1/observability/baseline-observability.md")))
+
+(test l2-spec-artifacts-exist
+  (is (file-exists-p* "tests/specs/channel-system-tests.md"))
+  (is (file-exists-p* "tests/specs/mcp-client-tests.md"))
+  (is (file-exists-p* "tests/specs/subagent-system-tests.md"))
+  (is (file-exists-p* "tests/specs/streaming-voice-tests.md"))
+  (is (file-exists-p* "tests/specs/adp-configuration-tests.md"))
+  (is (file-exists-p* "tests/specs/adp-gateway-api-tests.md"))
+  (is (file-exists-p* "tests/specs/adp-commands-tests.md"))
+  (is (file-exists-p* "tests/specs/adp-security-tests.md"))
+  (is (file-exists-p* "tests/specs/adp-architecture-tests.md"))
+  (is (file-exists-p* "tests/specs/adp-usage-tests.md"))
+  (is (file-exists-p* "tests/specs/architecture-index-tests.md"))
+  (is (file-exists-p* "tests/specs/testing-policy-tests.md"))
+  (is (file-exists-p* "tests/specs/observability-tests.md")))

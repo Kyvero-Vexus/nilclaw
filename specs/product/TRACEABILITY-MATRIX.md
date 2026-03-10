@@ -2,9 +2,11 @@
 
 - L0 IDs total: 28
 - L1 specs total: 30
-- L2 specs total: 11
+- L2 specs total: 24
 - Clean L1->L0 mappings: 30/30
-- Clean L2->L1+L0 mappings: 11/11
+- Clean L2->L1+L0 mappings: 24/24
+- Clean L2->L3 mappings: 24/24
+- Clean L3->L4 mappings: 12/12 mapped L3 artifacts
 
 ## L0 IDs
 - C-CONFIG-EXPLICITNESS
@@ -37,3 +39,5 @@
 - F-UI-TERMINAL-CLIENT
 
 ## L0 without L1 refs
+
+None.
