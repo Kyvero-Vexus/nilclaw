@@ -7,9 +7,9 @@
 - **Last Updated:** 2026-03-10
 
 ## Description
-This catalog defines top-level product features NilClaw must provide (baseline from current NullClaw behavior). These are high-authority feature truths, not implementation details.
+This catalog defines top-level product features NilClaw must provide (baseline from current NullClaw behavior). These are high-authority feature truths, not implementation details or constraints.
 
-## Normative Truths
+## Feature Truths
 
 ### Interface & Interaction Features
 - **F-UI-TERMINAL:** NilClaw MUST provide an interactive terminal interface (TUI/REPL) for direct use.
@@ -36,21 +36,11 @@ This catalog defines top-level product features NilClaw must provide (baseline f
 - **F-LLM-COMPAT:** NilClaw MUST support OpenAI-compatible provider APIs.
 - **F-ROUTING-AGENT:** NilClaw MUST route requests/events to the correct agent/session.
 
-### Security & Safety Features
-- **F-SEC-POLICY:** NilClaw MUST enforce explicit security policy over commands/tools.
-- **F-SEC-SANDBOX:** NilClaw MUST support sandboxed execution constraints.
-- **F-SEC-AUTH:** NilClaw MUST support authentication/authorization for protected interfaces.
-
 ### Channel & Integration Features
 - **F-CH-MULTICHANNEL:** NilClaw MUST support external channel integrations beyond terminal.
 - **F-CH-WEBHOOK:** NilClaw MUST support webhook-based inbound message handling where applicable.
 
-### Reliability & Observability Features
-- **F-REL-RETRY-TIMEOUT:** NilClaw MUST define and enforce retry/timeout behavior on external operations.
-- **F-OBS-LOGGING:** NilClaw MUST emit sufficient logs/events for operational diagnostics.
-
-## Optional Additional Sections
-### Non-goals
+## Non-goals
 - This catalog does NOT define low-level implementation design.
 - This catalog does NOT define exact UI rendering details.
 

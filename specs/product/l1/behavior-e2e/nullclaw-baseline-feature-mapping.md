@@ -9,7 +9,7 @@
 ## Purpose
 Map L0 feature truths to concrete L1 behavioral spec surfaces currently available in NilClaw spec corpus.
 
-## Mapping
+## Feature Mapping
 
 ### Interface & Interaction
 - **F-UI-TERMINAL** -> `specs/product/extracted/agent-core.md`, `specs/product/extracted/channel-system.md`
@@ -56,3 +56,14 @@ Map L0 feature truths to concrete L1 behavioral spec surfaces currently availabl
 ## Traceability
 - **Traces up to L0:** `L0-feature-catalog`
 - **Traces down to L2:** `tests/specs/*` and planned `tests/e2e-specs/*`
+
+
+## Constraint Mapping
+
+- **C-SEC-POLICY-ENFORCEMENT** -> `specs/product/extracted/security-sandboxing.md`
+- **C-SEC-SANDBOX-BOUNDARY** -> `specs/product/extracted/security-sandboxing.md`
+- **C-SEC-AUTH-BOUNDARY** -> `specs/product/extracted/gateway-control-plane.md`, `specs/product/extracted/security-sandboxing.md`
+- **C-SEC-SECRET-HANDLING** -> `specs/product/extracted/security-sandboxing.md`
+- **C-SAFE-PRIORITY** -> `specs/product/extracted/agent-core.md`
+- **C-REL-TIMEOUT-RETRY** -> `specs/product/extracted/provider-abstraction.md`, `specs/product/extracted/gateway-control-plane.md`
+- **C-CONFIG-EXPLICITNESS** -> `specs/product/extracted/configuration.md`
