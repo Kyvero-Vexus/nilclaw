@@ -33,14 +33,15 @@
 
 (defun make-default-policy ()
   (make-security-policy
-   :allowed-commands '("git" "npm" "cargo" "ls" "cat" "grep" "head" "tail" "wc" "echo" "find" "touch" "mkdir" "mv" "cp" "rm")))
+   :allowed-commands '("git" "npm" "cargo" "ls" "cat" "grep" "head" "tail" "wc" "echo" "find"
+                       "touch" "mkdir" "mv" "cp" "rm" "trash")))
 
 (defun resolve-allowed-commands (autonomy configured)
-  (cond
-    ((and (eq autonomy :full) (or (null configured) (null (remove-if-not #'stringp configured)))) '("*"))
-    ((or (null configured) (null (remove-if-not #'stringp configured)))
-     (policy-allowed-commands (make-default-policy)))
-    (t configured)))
+  (let ((valid (remove-if-not #'stringp configured)))
+    (cond
+      ((and (eq autonomy :full) (null valid)) '("*"))
+      ((null valid) (policy-allowed-commands (make-default-policy)))
+      (t configured))))
 
 (defun record-action (tracker autonomy)
   (cond

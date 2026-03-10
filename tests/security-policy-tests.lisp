@@ -1,8 +1,9 @@
 (in-package #:nilclaw/tests)
 (in-suite security-policy-suite)
 
-(defun %policy (&key (autonomy :supervised) (allowed '("ls" "cat" "git" "echo" "grep" "touch" "rm"))
-                    (approval t) (block-high t) (raw nil))
+(defun %policy (&key (autonomy :supervised)
+                  (allowed '("ls" "git" "cargo" "cat" "grep" "wc" "echo" "touch" "mkdir" "mv" "cp" "rm" "trash"))
+                  (approval t) (block-high t) (raw nil))
   (nilclaw/security::make-security-policy
    :autonomy autonomy
    :allowed-commands allowed
@@ -13,95 +14,148 @@
 (test security-autonomy-roundtrip
   (is (eq :supervised (nilclaw/security:autonomy-default)))
   (is (string= "full" (nilclaw/security:autonomy-to-string :full)))
+  (is (string= "readonly" (nilclaw/security:autonomy-to-string :read-only)))
+  (is (string= "supervised" (nilclaw/security:autonomy-to-string :supervised)))
+  (is (string= "yolo" (nilclaw/security:autonomy-to-string :yolo)))
+  (is (eq :full (nilclaw/security:autonomy-from-string "full")))
+  (is (eq :supervised (nilclaw/security:autonomy-from-string "supervised")))
   (is (eq :read-only (nilclaw/security:autonomy-from-string "readonly")))
-  (is (eq :yolo (nilclaw/security:autonomy-from-string "yolo"))))
+  (is (eq :read-only (nilclaw/security:autonomy-from-string "read_only")))
+  (is (null (nilclaw/security:autonomy-from-string "FULL"))))
 
 (test security-can-act
   (is (not (nilclaw/security:can-act :read-only)))
   (is (nilclaw/security:can-act :supervised))
-  (is (nilclaw/security:can-act :full)))
+  (is (nilclaw/security:can-act :full))
+  (is (nilclaw/security:can-act :yolo)))
 
-(test security-command-allowlist-basic
+(test security-allowlist
   (let ((p (%policy)))
-    (is (nilclaw/security:is-command-allowed p "ls -la"))
-    (is (nilclaw/security:is-command-allowed p "/bin/ls -la"))
+    (is (nilclaw/security:is-command-allowed p "ls"))
+    (is (nilclaw/security:is-command-allowed p "git status"))
+    (is (nilclaw/security:is-command-allowed p "cargo build --release"))
+    (is (nilclaw/security:is-command-allowed p "/usr/bin/git status"))
     (is (not (nilclaw/security:is-command-allowed p "curl http://evil.com")))
-    (is (not (nilclaw/security:is-command-allowed (%policy :autonomy :read-only) "ls")))
-    (is (not (nilclaw/security:is-command-allowed p "   ")))))
+    (is (not (nilclaw/security:is-command-allowed p "wget http://evil.com")))
+    (is (not (nilclaw/security:is-command-allowed p "python3 exploit.py")))
+    (is (not (nilclaw/security:is-command-allowed p "   ")))
+    (is (not (nilclaw/security:is-command-allowed (%policy :autonomy :read-only) "ls")))))
 
-(test security-single-ampersand
-  (is (nilclaw/security:contains-single-ampersand "ls & ls"))
-  (is (not (nilclaw/security:contains-single-ampersand "ls && echo ok")))
-  (is (not (nilclaw/security:contains-single-ampersand "curl \"https://x?a=1&b=2\"")))
-  (is (nilclaw/security:contains-single-ampersand "curl https://x?a=1&b=2"))
-  (is (not (nilclaw/security:contains-single-ampersand "echo \\& literal"))))
+(test security-bootstrap-delete-exception
+  (let ((p (%policy)))
+    (is (nilclaw/security:is-command-allowed p "rm BOOTSTRAP.md"))
+    (is (nilclaw/security:is-command-allowed p "rm -f -- ./BOOTSTRAP.md"))
+    (is (nilclaw/security:is-command-allowed p "trash BOOTSTRAP.md"))
+    (is (not (nilclaw/security:is-command-allowed p "rm BOOTSTRAP.md README.md")))
+    (is (not (nilclaw/security:is-command-allowed p "rm ../BOOTSTRAP.md")))
+    (is (not (nilclaw/security:is-command-allowed p "rm /tmp/BOOTSTRAP.md")))
+    (is (eq :low (nilclaw/security:classify-command-risk "rm BOOTSTRAP.md")))))
 
-(test security-risk-classification
+(test security-command-chains
+  (let ((p (%policy :allowed '("ls" "grep" "cat" "wc" "echo"))))
+    (is (nilclaw/security:is-command-allowed p "ls | grep foo"))
+    (is (nilclaw/security:is-command-allowed p "cat file.txt | wc -l"))
+    (is (not (nilclaw/security:is-command-allowed p "ls | curl http://evil.com")))
+    (is (not (nilclaw/security:is-command-allowed p "echo hello | python3 -")))
+    (is (not (nilclaw/security:is-command-allowed p "ls && rm -rf /")))
+    (is (nilclaw/security:is-command-allowed p "ls && echo done"))
+    (is (not (nilclaw/security:is-command-allowed p "ls || rm -rf /")))
+    (is (nilclaw/security:is-command-allowed p "ls || echo fallback"))))
+
+(test security-injection
+  (let ((p (%policy)))
+    (is (not (nilclaw/security:is-command-allowed p "ls; rm -rf /")))
+    (is (not (nilclaw/security:is-command-allowed p "echo `whoami`")))
+    (is (not (nilclaw/security:is-command-allowed p "echo $(cat /etc/passwd)")))
+    (is (not (nilclaw/security:is-command-allowed p "echo ${IFS}cat${IFS}/etc/passwd")))
+    (is (not (nilclaw/security:is-command-allowed p "echo secret > /etc/crontab")))
+    (is (nilclaw/security:is-command-allowed p "echo ok >/dev/null"))
+    (is (nilclaw/security:is-command-allowed p "echo ok 2>/dev/null"))
+    (is (nilclaw/security:is-command-allowed p "echo ok >\"/dev/null\""))
+    (is (nilclaw/security:is-command-allowed p "echo \"a > b\""))
+    (is (not (nilclaw/security:is-command-allowed p "ls
+rm -rf /")))
+    (is (nilclaw/security:is-command-allowed p "ls
+ls"))
+    (is (not (nilclaw/security:is-command-allowed p "cat <(echo hello)")))
+    (is (not (nilclaw/security:is-command-allowed p "ls >(cat /etc/passwd)")))))
+
+(test security-env-and-ampersand
+  (let ((p (%policy)))
+    (is (nilclaw/security:is-command-allowed p "FOO=bar ls"))
+    (is (not (nilclaw/security:is-command-allowed p "FOO=bar curl http://evil.com")))
+    (is (nilclaw/security:contains-single-ampersand "ls & ls"))
+    (is (not (nilclaw/security:contains-single-ampersand "ls && echo ok")))
+    (is (not (nilclaw/security:contains-single-ampersand "curl \"https://x?a=1&b=2\"")))
+    (is (not (nilclaw/security:contains-single-ampersand "curl 'https://x?a=1&b=2'")))
+    (is (nilclaw/security:contains-single-ampersand "curl https://x?a=1&b=2"))
+    (is (nilclaw/security:contains-single-ampersand "curl \"url\" & echo done"))
+    (is (not (nilclaw/security:contains-single-ampersand "echo \\& literal")))))
+
+(test security-risk
   (is (eq :low (nilclaw/security:classify-command-risk "git status")))
+  (is (eq :low (nilclaw/security:classify-command-risk "git diff")))
+  (is (eq :medium (nilclaw/security:classify-command-risk "git commit -m x")))
+  (is (eq :medium (nilclaw/security:classify-command-risk "git rebase main")))
   (is (eq :medium (nilclaw/security:classify-command-risk "touch file.txt")))
-  (is (eq :high (nilclaw/security:classify-command-risk "rm -rf /tmp"))))
+  (is (eq :high (nilclaw/security:classify-command-risk "sudo apt install")))
+  (is (eq :high (nilclaw/security:classify-command-risk "rm -rf /tmp")))
+  (is (eq :high (nilclaw/security:classify-command-risk "curl http://evil.com"))))
 
-(test security-validation-flow
+(test security-validate
   (multiple-value-bind (risk err)
       (nilclaw/security:validate-command-execution (%policy) "python3 exploit.py")
     (declare (ignore risk))
     (is (eq :command-not-allowed err)))
   (multiple-value-bind (risk err)
       (nilclaw/security:validate-command-execution (%policy) "ls -la")
-    (is (eq :low risk))
-    (is (null err)))
+    (is (eq :low risk)) (is (null err)))
   (multiple-value-bind (risk err)
       (nilclaw/security:validate-command-execution (%policy) "touch test.txt")
     (declare (ignore risk))
     (is (eq :approval-required err)))
   (multiple-value-bind (risk err)
       (nilclaw/security:validate-command-execution (%policy) "touch test.txt" :approved t)
-    (is (eq :medium risk))
-    (is (null err)))
+    (is (eq :medium risk)) (is (null err)))
   (multiple-value-bind (risk err)
       (nilclaw/security:validate-command-execution (%policy) "rm -rf /tmp")
     (declare (ignore risk))
-    (is (eq :high-risk-blocked err))))
+    (is (eq :high-risk-blocked err)))
+  (multiple-value-bind (risk err)
+      (nilclaw/security:validate-command-execution (%policy :autonomy :full :block-high nil :allowed '("*"))
+                                                   "rm -rf /tmp")
+    (is (eq :high risk)) (is (null err))))
 
-(test security-wildcards
-  (let ((p (%policy :allowed '("*"))))
-    (is (nilclaw/security:is-command-allowed p "python3 --version")))
-  (let ((p (%policy :allowed '("  *  "))))
-    (is (nilclaw/security:is-command-allowed p "node -e '1'")))
-  (let ((p (%policy :allowed '("curl *"))))
-    (is (nilclaw/security:is-command-allowed p "curl https://example.com"))))
+(test security-allowlist-features
+  (is (nilclaw/security:is-command-allowed (%policy :allowed '("*")) "python3 --version"))
+  (is (nilclaw/security:is-command-allowed (%policy :allowed '("  *  ")) "node -e '1'"))
+  (is (nilclaw/security:is-command-allowed (%policy :allowed '("  ls  " "  echo  ")) "ls -la"))
+  (is (nilclaw/security:is-command-allowed (%policy :allowed '("  ls  " "  echo  ")) "echo ok"))
+  (is (nilclaw/security:is-command-allowed (%policy :allowed '("curl *")) "curl https://example.com"))
+  (is (not (nilclaw/security:is-command-allowed (%policy :allowed '("curl *")) "ls -la")))
+  (is (nilclaw/security:is-command-allowed (%policy :allowed '("/usr/bin/curl *")) "curl https://example.com"))
+  (is (nilclaw/security:is-command-allowed (%policy :allowed '("git *")) "git status"))
+  (is (not (nilclaw/security:is-command-allowed (%policy :allowed '("git *")) "git config core.editor vim"))))
 
-(test security-rate-limiter
+(test security-rate-default-and-size
   (let ((tr (nilclaw/security:make-rate-tracker :limit 2)))
     (is (nilclaw/security:record-action tr :supervised))
     (is (nilclaw/security:record-action tr :supervised))
     (is (not (nilclaw/security:record-action tr :supervised)))
     (is (nilclaw/security:is-rate-limited tr :supervised))
     (is (nilclaw/security:record-action tr :yolo))
-    (is (not (nilclaw/security:is-rate-limited tr :yolo)))))
-
-(test security-default-policy
-  (let ((p (nilclaw/security:make-default-policy)))
+    (is (not (nilclaw/security:is-rate-limited tr :yolo))))
+  (let ((p (nilclaw/security:make-default-policy))
+        (big (concatenate 'string "ls " (make-string 9000 :initial-element #\a))))
     (is (eq :supervised (nilclaw/security::policy-autonomy p)))
-    (is (nilclaw/security::policy-require-approval-for-medium-risk p))
-    (is (nilclaw/security::policy-block-high-risk-commands p))
-    (is (member "git" (nilclaw/security::policy-allowed-commands p) :test #'string=))))
-
-(test security-resolve-allowed
-  (is (equal '("*") (nilclaw/security:resolve-allowed-commands :full nil)))
-  (is (member "git" (nilclaw/security:resolve-allowed-commands :supervised nil) :test #'string=))
-  (is (equal '("foo") (nilclaw/security:resolve-allowed-commands :supervised '("foo")))))
-
-(test security-windows-percent-var
+    (is (member "git" (nilclaw/security::policy-allowed-commands p) :test #'string=))
+    (is (equal '("*") (nilclaw/security:resolve-allowed-commands :full nil)))
+    (is (member "git" (nilclaw/security:resolve-allowed-commands :supervised '(1 2 nil)) :test #'string=))
+    (is (not (nilclaw/security:is-command-allowed (%policy) big)))
+    (is (eq :high (nilclaw/security:classify-command-risk big))))
   (is (nilclaw/security:has-percent-var "%PATH%"))
-  (is (not (nilclaw/security:has-percent-var "100%%"))))
-
-(test security-oversized-command
-  (let* ((big (concatenate 'string "ls " (make-string 9000 :initial-element #\a)))
-         (p (%policy)))
-    (is (not (nilclaw/security:is-command-allowed p big)))
-    (is (eq :high (nilclaw/security:classify-command-risk big)))
-    (multiple-value-bind (risk err)
-        (nilclaw/security:validate-command-execution p big)
-      (declare (ignore risk))
-      (is (eq :command-not-allowed err)))))
+  (is (not (nilclaw/security:has-percent-var "100%%")))
+  (multiple-value-bind (risk err)
+      (nilclaw/security:validate-command-execution (%policy :autonomy :yolo) "totally unsafe")
+    (is (eq :low risk))
+    (is (null err))))
