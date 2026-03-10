@@ -127,3 +127,8 @@
   (audio-media (list :enabled t :provider "groq" :model "whisper-large-v3"
                      :base-url nil :language nil)
                :type list))
+
+(declaim (ftype (function () config) make-default-config))
+(defun make-default-config ()
+  "Construct a fresh config with secure defaults."
+  (make-config))

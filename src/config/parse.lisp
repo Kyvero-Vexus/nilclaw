@@ -106,7 +106,8 @@
       (when primary
         (multiple-value-bind (provider model)
             (parse-model-string primary)
-          (when (and provider (> (length provider) 0))
+          (when (or (> (length provider) 0)
+                    (not (config-legacy-default-provider-detected cfg)))
             (setf (config-default-provider cfg) provider))
           (setf (config-default-model cfg) model))))
     ;; Gateway
