@@ -38,10 +38,22 @@
     (is (listp channels))))
 
 (test e2e-cron-heartbeat
-  (is (nilclaw/cron:cron-runtime-ready-p)))
+  (let* ((runtime (nilclaw/cron:make-cron-runtime :max-retries 1))
+         (tasks (list (nilclaw/cron:make-cron-task :id "heartbeat" :due-at 0 :payload :heartbeat)))
+         (executed (nilclaw/cron:cron-run-due-tasks
+                    runtime
+                    tasks
+                    0
+                    (lambda (task)
+                      (declare (ignore task))
+                      (values t nil)))))
+    (is (eq :completed (nilclaw/cron:cron-task-status (first executed))))))
 
 (test e2e-gateway-control-plane
-  (is (nilclaw/gateway:gateway-runtime-ready-p)))
+  (let ((response (nilclaw/gateway:gateway-handle-request
+                   (nilclaw/gateway:make-gateway-request :id "abc" :method "ping" :params '()))))
+    (is (nilclaw/gateway:gateway-response-ok-p response))
+    (is (equal '(:pong t) (nilclaw/gateway:gateway-response-result response)))))
 
 (test e2e-identity-workspace
   (is (nilclaw/bootstrap:bootstrap-entrypoint-available-p)))
@@ -52,7 +64,16 @@
     (is (listp mcp))))
 
 (test e2e-provider-abstraction
-  (is (nilclaw/provider:provider-integration-ready-p)))
+  (let* ((runtime (nilclaw/provider:make-provider-runtime :max-retries 1))
+         (request (nilclaw/provider:make-provider-request :model "openai/gpt-4o-mini" :messages '((:role "user" :content "hello"))))
+         (result (nilclaw/provider:provider-complete
+                  runtime
+                  request
+                  (lambda (req attempt)
+                    (declare (ignore req attempt))
+                    (values "hello back" nil)))))
+    (is (nilclaw/provider:provider-result-success-p result))
+    (is (string= "hello back" (nilclaw/provider:provider-result-content result)))))
 
 (test e2e-skills-system
   (is (nilclaw/skills:skills-loader-entrypoint-available-p)))
