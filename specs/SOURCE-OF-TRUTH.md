@@ -152,6 +152,14 @@ Interpretation:
 
 ---
 
+
+## L0 Template
+
+To keep L0 traceable while remaining concise, use:
+- `specs/templates/l0/TEMPLATE-L0-MINIMAL.md`
+
+L0 documents are intentionally short and high-authority.
+
 ## L1 Lanes (System Design Specification Categories)
 
 To reduce blind spots, L1 is subdivided into lanes:
