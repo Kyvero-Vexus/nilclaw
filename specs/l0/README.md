@@ -1,8 +1,13 @@
-# L0 Specs
+# L0 Specs (NilClaw)
 
-L0 defines top-level behavioral truth and product constitution.
+These documents are the top authority for NilClaw intent.
 
-Use template:
+Current L0 set:
+- `L0-behavioral-truth.md`
+- `L0-key-technical-attributes.md`
+- `L0-usage-metaphors.md`
+
+Template:
 - `../templates/l0/TEMPLATE-L0-MINIMAL.md`
 
 Policy:
