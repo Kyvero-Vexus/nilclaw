@@ -1,6 +1,6 @@
 # NilClaw E2E Run Report
 
-Run date: 2026-03-10
+Run date: 2026-03-10 (08:05 UTC cron run)
 Command:
 
 ```bash
@@ -13,10 +13,11 @@ sbcl --non-interactive \
 
 ## Summary
 
-- Total E2E tests: **14**
-- Passed: **4**
-- Failed: **0**
-- Skipped: **10**
+- Total E2E test cases: **14**
+- Passed cases: **4**
+- Failed cases: **0**
+- Skipped cases: **10**
+- FiveAM check totals from run: **22 checks** = 11 pass / 11 skip / 0 fail
 
 ## Per-test status
 
@@ -41,3 +42,4 @@ sbcl --non-interactive \
 
 - New L3 artifact added: `tests/e2e-smoke-tests.lisp`.
 - This run converts currently implementable E2E specs into executable smoke coverage and marks unavailable interfaces/credentials explicitly as SKIPPED.
+- `E2E-STREAMING-VOICE` contributes two explicit skip checks (missing runtime entrypoint + missing provider key), so FiveAM reports 11 skip checks for 10 skipped test cases.

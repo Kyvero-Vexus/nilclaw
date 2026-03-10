@@ -1,6 +1,6 @@
 # NilClaw L3 Coverage Matrix (L2 -> L3)
 
-Generated/updated: 2026-03-10
+Generated/updated: 2026-03-10 (08:05 UTC cron run)
 
 ## Mapping
 
