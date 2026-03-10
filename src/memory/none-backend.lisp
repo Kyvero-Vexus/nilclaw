@@ -1,0 +1,16 @@
+(in-package #:nilclaw/memory)
+
+(defclass none-memory (memory-backend) ())
+(defun make-none-memory () (make-instance 'none-memory))
+
+(defmethod memory-name ((backend none-memory)) (declare (ignore backend)) "none")
+(defmethod memory-health-check ((backend none-memory)) (declare (ignore backend)) t)
+(defmethod memory-count ((backend none-memory)) (declare (ignore backend)) 0)
+(defmethod memory-get ((backend none-memory) key) (declare (ignore backend key)) nil)
+(defmethod memory-recall ((backend none-memory) query limit &optional session-id)
+  (declare (ignore backend query limit session-id)) '())
+(defmethod memory-list ((backend none-memory) &optional category session-id)
+  (declare (ignore backend category session-id)) '())
+(defmethod memory-store ((backend none-memory) key content category &optional session-id)
+  (declare (ignore backend key content category session-id)) nil)
+(defmethod memory-forget ((backend none-memory) key) (declare (ignore backend key)) nil)
