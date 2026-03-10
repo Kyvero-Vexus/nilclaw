@@ -12,7 +12,8 @@ Map L0 feature truths to concrete L1 behavioral spec surfaces currently availabl
 ## Feature Mapping
 
 ### Interface & Interaction
-- **F-UI-TERMINAL** -> `specs/product/extracted/agent-core.md`, `specs/product/extracted/channel-system.md`
+- **F-UI-CLI** -> `specs/product/extracted/agent-core.md`
+- **F-UI-TERMINAL-CLIENT** -> `specs/product/extracted/channel-system.md`
 - **F-UI-GATEWAY** -> `specs/product/extracted/gateway-control-plane.md`
 - **F-UI-STREAMING** -> `specs/product/extracted/streaming-voice.md`
 

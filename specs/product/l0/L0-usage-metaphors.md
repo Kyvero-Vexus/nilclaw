@@ -18,7 +18,8 @@ Define the symbolic objects users and developers reason with when using NilClaw.
 - T6: Spec pyramid is a primary metaphor for authority flow: L0 intention -> L1 design -> L2 test specs -> L3 tests -> L4 implementation.
 
 - T7: Gateway is a primary metaphor: the long-running control plane process that hosts core runtime services (session orchestration, API endpoints, channel/webhook ingress, auth/policy enforcement, scheduling hooks).
-- T8: Terminal UI (TUI/REPL) is a client metaphor: it connects to or invokes gateway-managed runtime behavior; it is not the runtime authority itself.
+- T8: CLI is a command-line interaction metaphor for direct local operation; it is not automatically a stateful runtime client view.
+- T9: Terminal client UI (TUI-style) is a stateful client metaphor connected to a running gateway/runtime, showing ongoing state and events.
 
 ## Optional Additional Sections
 ### Terminology Guardrails

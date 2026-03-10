@@ -12,7 +12,8 @@ This catalog defines top-level product features NilClaw must provide (baseline f
 ## Feature Truths
 
 ### Interface & Interaction Features
-- **F-UI-TERMINAL:** NilClaw MUST provide an interactive terminal interface (TUI/REPL) for direct use.
+- **F-UI-CLI:** NilClaw MUST provide an interactive command-line interface (CLI) for direct local use.
+- **F-UI-TERMINAL-CLIENT:** NilClaw SHOULD provide a stateful terminal client UI (TUI-style) that connects to gateway runtime state.
 - **F-UI-GATEWAY:** NilClaw MUST provide a gateway control plane runtime that hosts core services and exposes non-terminal integrations.
 - **F-UI-STREAMING:** NilClaw MUST support streamed assistant responses where configured.
 
@@ -53,4 +54,6 @@ Changes require explicit human request.
 
 
 ### Feature Boundary Note
+- `F-UI-CLI` is direct command-line interaction and may run without a separate long-running daemon.
+- `F-UI-TERMINAL-CLIENT` is a stateful terminal UI client connected to a running gateway/runtime.
 - `F-UI-GATEWAY` refers to the runtime control plane capability itself (core runtime authority + integration surfaces), not only an external-facing HTTP adapter.
