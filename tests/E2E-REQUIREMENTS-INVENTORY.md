@@ -4,7 +4,7 @@ Updated: 2026-03-10
 
 | E2E Spec | Test Case ID | Requirements |
 |---|---|---|
-| tests/e2e-specs/agent-core-e2e.md | E2E-AGENT-CORE | Internal runtime entrypoint (`nilclaw/agent:cli-entrypoint-available-p`) |
+| tests/e2e-specs/agent-core-e2e.md | E2E-AGENT-CORE | Agent command handling behavior (`agent-handle-request` for `chat.send`) + runtime availability |
 | tests/e2e-specs/channel-system-e2e.md | E2E-CHANNEL-SYSTEM | Internal config surface (`config-channels`) |
 | tests/e2e-specs/configuration-e2e.md | E2E-CONFIGURATION | Local SBCL build/runtime only |
 | tests/e2e-specs/cron-heartbeat-e2e.md | E2E-CRON-HEARTBEAT | Internal cron runtime readiness (`nilclaw/cron:cron-runtime-ready-p`) |

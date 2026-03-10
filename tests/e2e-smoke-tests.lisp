@@ -30,7 +30,12 @@
     (is (string= "read" (nilclaw/dispatcher:tool-call-name (first calls))))))
 
 (test e2e-agent-core
-  (is (nilclaw/agent:cli-entrypoint-available-p)))
+  (let* ((runtime (nilclaw/agent:make-default-agent-runtime))
+         (response (nilclaw/agent:agent-handle-request
+                    runtime
+                    (nilclaw/agent:make-agent-request :command "chat.send" :payload '((:message . "hello"))))))
+    (is (nilclaw/agent:cli-entrypoint-available-p runtime))
+    (is (nilclaw/agent:agent-response-ok-p response))))
 
 (test e2e-channel-system
   (let* ((cfg (nilclaw/config:make-default-config))
