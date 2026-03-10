@@ -6,10 +6,10 @@ Generated/updated: 2026-03-10
 
 | L2 Spec ID | L3 Test Artifact(s) |
 |---|---|
-| L2-UNIT-config-tests | tests/config-tests.lisp |
-| L2-UNIT-security-policy-tests | tests/security-policy-tests.lisp |
-| L2-INT-memory-contract-tests | tests/memory-contract-tests.lisp |
-| L2-UNIT-agent-dispatcher-tests | tests/agent-dispatcher-tests.lisp |
+| L2-UNIT-config-tests | tests/config-tests.lisp, tests/e2e-smoke-tests.lisp |
+| L2-UNIT-security-policy-tests | tests/security-policy-tests.lisp, tests/e2e-smoke-tests.lisp |
+| L2-INT-memory-contract-tests | tests/memory-contract-tests.lisp, tests/e2e-smoke-tests.lisp |
+| L2-UNIT-agent-dispatcher-tests | tests/agent-dispatcher-tests.lisp, tests/e2e-smoke-tests.lisp |
 | L2-INT-memory-sqlite-tests | tests/memory-sqlite-tests.lisp |
 | L2-COMP-providers-compatible-tests | tests/providers-compatible-tests.lisp |
 | L2-INT-skills-tests | tests/skills-tests.lisp |

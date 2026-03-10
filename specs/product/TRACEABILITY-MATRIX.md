@@ -41,3 +41,11 @@
 ## L0 without L1 refs
 
 None.
+
+## E2E validation snapshot (2026-03-10)
+
+- E2E L3 artifact: `tests/e2e-smoke-tests.lisp`
+- Total E2E cases from `tests/e2e-specs/*`: 14
+- PASS: 4
+- FAIL: 0
+- SKIPPED: 10 (explicit requirements documented in `tests/E2E-RUN-REPORT.md` and `tests/E2E-REQUIREMENTS-INVENTORY.md`)

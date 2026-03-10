@@ -55,6 +55,10 @@
   :description "Traceability linkage tests"
   :in nilclaw-suite)
 
+(def-suite e2e-suite
+  :description "E2E smoke suite mapped from tests/e2e-specs"
+  :in nilclaw-suite)
+
 (defun run-nilclaw-tests ()
   "Run all NilClaw tests and return results."
   (run! 'nilclaw-suite))

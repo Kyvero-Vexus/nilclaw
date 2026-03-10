@@ -18,6 +18,7 @@ Generated/updated: 2026-03-10
 | tests/gateway-tests.lisp | src/gateway/types.lisp, src/gateway/gateway.lisp |
 | tests/agent-root-tests.lisp | src/agent/types.lisp, src/agent/agent.lisp |
 | tests/traceability-linkage-tests.lisp | src/bootstrap/bootstrap.lisp, src/gateway/gateway.lisp, src/security/policy.lisp, src/agent/agent.lisp |
+| tests/e2e-smoke-tests.lisp | src/config/parse.lisp, src/config/validate.lisp, src/memory/lru-backend.lisp, src/security/commands.lisp, src/dispatcher/dispatcher.lisp |
 
 ## Unmapped src modules
 
