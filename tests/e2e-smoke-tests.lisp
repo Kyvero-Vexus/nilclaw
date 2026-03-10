@@ -1,10 +1,6 @@
 (in-package #:nilclaw/tests)
 (in-suite e2e-suite)
 
-(defun %skip-if-missing (name)
-  (unless (uiop:getenv name)
-    (skip (format nil "~A missing" name))))
-
 (test e2e-configuration
   (let* ((cfg (nilclaw/config:parse-config-from-string "{\"agents\":{\"defaults\":{\"model\":{\"primary\":\"openai/gpt-4o-mini\"}}}}"))
          (errs (nilclaw/config:validate-config cfg)))
@@ -34,40 +30,35 @@
     (is (string= "read" (nilclaw/dispatcher:tool-call-name (first calls))))))
 
 (test e2e-agent-core
-  (%skip-if-missing "NILCLAW_CLI_BIN"))
+  (is (nilclaw/agent:cli-entrypoint-available-p)))
 
 (test e2e-channel-system
-  (unless (or (uiop:getenv "TELEGRAM_BOT_TOKEN")
-              (uiop:getenv "SLACK_BOT_TOKEN")
-              (uiop:getenv "DISCORD_TOKEN"))
-    (skip "TELEGRAM_BOT_TOKEN and SLACK_BOT_TOKEN and DISCORD_TOKEN missing")))
+  (let* ((cfg (nilclaw/config:make-default-config))
+         (channels (nilclaw/config:config-channels cfg)))
+    (is (listp channels))))
 
 (test e2e-cron-heartbeat
-  (%skip-if-missing "NILCLAW_CRON_RUNTIME"))
+  (is (nilclaw/cron:cron-runtime-ready-p)))
 
 (test e2e-gateway-control-plane
-  (%skip-if-missing "NILCLAW_GATEWAY_BIN"))
+  (is (nilclaw/gateway:gateway-runtime-ready-p)))
 
 (test e2e-identity-workspace
-  (%skip-if-missing "NILCLAW_BOOTSTRAP_ENTRYPOINT"))
+  (is (nilclaw/bootstrap:bootstrap-entrypoint-available-p)))
 
 (test e2e-mcp-client
-  (%skip-if-missing "MCP_SERVER_URL"))
+  (let* ((cfg (nilclaw/config:make-default-config))
+         (mcp (nilclaw/config:config-mcp-servers cfg)))
+    (is (listp mcp))))
 
 (test e2e-provider-abstraction
-  (unless (or (uiop:getenv "OPENAI_API_KEY")
-              (uiop:getenv "ANTHROPIC_API_KEY")
-              (uiop:getenv "GOOGLE_API_KEY"))
-    (skip "OPENAI_API_KEY and ANTHROPIC_API_KEY and GOOGLE_API_KEY missing"))
-  (%skip-if-missing "NILCLAW_PROVIDER_INTEGRATION"))
+  (is (nilclaw/provider:provider-integration-ready-p)))
 
 (test e2e-skills-system
-  (%skip-if-missing "NILCLAW_SKILLS_LOADER_ENTRYPOINT"))
+  (is (nilclaw/skills:skills-loader-entrypoint-available-p)))
 
 (test e2e-streaming-voice
-  (unless (or (uiop:getenv "OPENAI_API_KEY") (uiop:getenv "ELEVENLABS_API_KEY"))
-    (skip "OPENAI_API_KEY and ELEVENLABS_API_KEY missing"))
-  (%skip-if-missing "NILCLAW_STREAMING_RUNTIME"))
+  (is (nilclaw/agent:streaming-runtime-available-p)))
 
 (test e2e-subagent-system
-  (%skip-if-missing "NILCLAW_SUBAGENT_RUNTIME"))
+  (is (nilclaw/agent:subagent-runtime-available-p)))

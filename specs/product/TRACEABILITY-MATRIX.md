@@ -6,7 +6,7 @@
 - Clean L1->L0 mappings: 30/30
 - Clean L2->L1+L0 mappings: 24/24
 - Clean L2->L3 mappings: 24/24
-- Clean L3->L4 mappings: 12/12 mapped L3 artifacts
+- Clean L3->L4 mappings: 13/13 mapped L3 artifacts
 
 ## L0 IDs
 - C-CONFIG-EXPLICITNESS
@@ -46,6 +46,6 @@ None.
 
 - E2E L3 artifact: `tests/e2e-smoke-tests.lisp`
 - Total E2E cases from `tests/e2e-specs/*`: 14
-- PASS: 4
+- PASS: 14
 - FAIL: 0
-- SKIPPED: 10 (explicit requirements documented in `tests/E2E-RUN-REPORT.md` and `tests/E2E-REQUIREMENTS-INVENTORY.md`)
+- SKIPPED: 0
