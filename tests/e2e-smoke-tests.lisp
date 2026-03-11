@@ -38,9 +38,38 @@
     (is (nilclaw/agent:agent-response-ok-p response))))
 
 (test e2e-channel-system
-  (let* ((cfg (nilclaw/config:make-default-config))
-         (channels (nilclaw/config:config-channels cfg)))
-    (is (listp channels))))
+  (let* ((cfg (nilclaw/config:make-default-config)))
+    ;; Behavioral validation: web account invariants should raise concrete
+    ;; config errors (path/auth-token/origin/relay-url contract checks).
+    (setf (nilclaw/config:config-channels cfg)
+          '((:web . ((:accounts . ((:acct . ((:path . "bad")
+                                              (:auth--token . "bad token")
+                                              (:allowed--origins . ("example.com"))
+                                              (:transport . "relay")
+                                              (:message--auth--mode . "token")))))))))
+    (let* ((errs (nilclaw/config:validate-config cfg))
+           (kinds (mapcar #'nilclaw/config:validation-error-kind errs)))
+      (is (member :invalid-web-path kinds))
+      (is (member :invalid-web-auth-token kinds))
+      (is (member :invalid-web-origin kinds))
+      (is (member :missing-web-relay-url kinds))
+      (is (member :invalid-web-message-auth-transport kinds))))
+  ;; Valid web relay config should pass with no web-specific violations.
+  (let* ((cfg (nilclaw/config:make-default-config)))
+    (setf (nilclaw/config:config-channels cfg)
+          '((:web . ((:accounts . ((:acct . ((:path . "/ok")
+                                              (:auth--token . "token123")
+                                              (:allowed--origins . ("https://example.com"))
+                                              (:transport . "relay")
+                                              (:relay--url . "wss://relay.example/ws")
+                                              (:message--auth--mode . "none")))))))))
+    (let* ((errs (nilclaw/config:validate-config cfg))
+           (kinds (mapcar #'nilclaw/config:validation-error-kind errs)))
+      (is (not (member :invalid-web-path kinds)))
+      (is (not (member :invalid-web-auth-token kinds)))
+      (is (not (member :invalid-web-origin kinds)))
+      (is (not (member :missing-web-relay-url kinds)))
+      (is (not (member :invalid-web-relay-url kinds))))))
 
 (test e2e-cron-heartbeat
   (let* ((runtime (nilclaw/cron:make-cron-runtime :max-retries 1))
@@ -100,9 +129,20 @@
   (is (nilclaw/bootstrap:bootstrap-entrypoint-available-p)))
 
 (test e2e-mcp-client
-  (let* ((cfg (nilclaw/config:make-default-config))
-         (mcp (nilclaw/config:config-mcp-servers cfg)))
-    (is (listp mcp))))
+  ;; Behavioral contract: parse real MCP server config and validate
+  ;; normalized structure.
+  (let* ((cfg (nilclaw/config:parse-config-from-string
+               "{\"mcp_servers\":{\"filesystem\":{\"command\":\"npx\",\"args\":[\"-y\",\"@modelcontextprotocol/server-filesystem\",\"/tmp\"],\"env\":{\"NODE_ENV\":\"test\"}}}}"))
+         (mcp (nilclaw/config:config-mcp-servers cfg))
+         (srv (first mcp)))
+    (is (= 1 (length mcp)))
+    (is (string= "filesystem" (getf srv :name)))
+    (is (string= "npx" (getf srv :command)))
+    (is (equal '("-y" "@modelcontextprotocol/server-filesystem" "/tmp")
+               (getf srv :args)))
+    (let ((env (getf srv :env)))
+      (is (= 1 (length env)))
+      (is (string= "test" (cdar env))))))
 
 (test e2e-provider-abstraction
   (let* ((runtime (nilclaw/provider:make-provider-runtime :max-retries 1))
@@ -129,4 +169,32 @@
   (is (nilclaw/agent:streaming-runtime-available-p)))
 
 (test e2e-subagent-system
-  (is (nilclaw/agent:subagent-runtime-available-p)))
+  ;; Behavioral contract: subagent.spawn success and failure paths.
+  (let* ((runtime (nilclaw/agent:make-default-agent-runtime))
+         (ok (nilclaw/agent:agent-handle-request
+              runtime
+              (nilclaw/agent:make-agent-request
+               :command "subagent.spawn"
+               :payload '((:task . "run-check")))))
+         (missing-task (nilclaw/agent:agent-handle-request
+                        runtime
+                        (nilclaw/agent:make-agent-request
+                         :command "subagent.spawn"
+                         :payload '((:foo . "bar")))))
+         (disabled-runtime (nilclaw/agent:make-agent-runtime
+                            :enabled nil
+                            :subagent-entrypoint "nilclaw/agent:spawn-subagent"
+                            :streaming-entrypoint "nilclaw/agent:stream-event"
+                            :cli-entrypoint "nilclaw/agent:main"
+                            :max-subagents 8))
+         (disabled (nilclaw/agent:agent-handle-request
+                    disabled-runtime
+                    (nilclaw/agent:make-agent-request
+                     :command "subagent.spawn"
+                     :payload '((:task . "run-check"))))))
+    (is (nilclaw/agent:agent-response-ok-p ok))
+    (is (equal '(:spawned t) (nilclaw/agent:agent-response-data ok)))
+    (is (not (nilclaw/agent:agent-response-ok-p missing-task)))
+    (is (eq :capacity-or-payload-error (nilclaw/agent:agent-response-code missing-task)))
+    (is (not (nilclaw/agent:agent-response-ok-p disabled)))
+    (is (eq :disabled (nilclaw/agent:agent-response-code disabled)))))
