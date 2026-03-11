@@ -2,10 +2,20 @@
 
 (declaim (optimize (safety 3) (debug 3)))
 
+;;; --- Gateway runtime ---
+
 (defstruct gateway-runtime
   (name "nilclaw-gateway" :type string)
   (enabled t :type boolean)
-  (port 3000 :type (integer 1 65535)))
+  (port 3000 :type (integer 1 65535))
+  ;; In-memory stores for session/agent/model state
+  (sessions nil :type list)       ; list of gateway-session
+  (agents nil :type list)         ; list of gateway-agent
+  (models nil :type list)         ; list of gateway-model
+  (connections nil :type list)    ; list of gateway-connection
+  (event-log nil :type list))     ; list of emitted events (for testing)
+
+;;; --- Request/Response ---
 
 (defstruct gateway-request
   (id "" :type string)
@@ -19,6 +29,8 @@
   (error-code nil :type (or null keyword))
   (error-message nil :type (or null string)))
 
+;;; --- Helpers ---
+
 (declaim (ftype (function () gateway-runtime) make-default-gateway-runtime))
 (defun make-default-gateway-runtime ()
   (make-gateway-runtime))
@@ -30,6 +42,27 @@
        (> (length (gateway-runtime-name runtime)) 0)
        (<= 1 (gateway-runtime-port runtime) 65535)))
 
+;;; --- Param accessor (handles both plist and alist) ---
+
+(declaim (ftype (function (list t &rest t) t) param-get))
+(defun param-get (params key &rest alt-keys)
+  "Get a value from PARAMS, which may be a plist or alist.
+Tries KEY first, then each ALT-KEY."
+  (labels ((try-key (k)
+             (cond
+               ;; plist: keyword followed by value
+               ((and (keywordp k) (getf params k nil))
+                (getf params k))
+               ;; alist: (key . value)
+               ((and (consp (first params))
+                     (assoc k params))
+                (cdr (assoc k params)))
+               (t nil))))
+    (or (try-key key)
+        (loop for ak in alt-keys
+              for v = (try-key ak)
+              when v return v))))
+
 (declaim (ftype (function (string list) gateway-response) malformed-request-response))
 (defun malformed-request-response (request-id message)
   (declare (type string request-id)
@@ -40,12 +73,271 @@
    :error-code :malformed-request
    :error-message (format nil "Malformed request:~{ ~a~}" message)))
 
-(declaim (ftype (function (gateway-request) gateway-response) gateway-handle-request))
-(defun gateway-handle-request (request)
+;;; --- Nonce generation ---
+
+(declaim (ftype (function () string) generate-nonce))
+(defun generate-nonce ()
+  "Generate a random nonce string for connect challenge."
+  (format nil "nonce-~A-~A" (get-universal-time) (random 1000000)))
+
+;;; --- Event emission ---
+
+(declaim (ftype (function (gateway-runtime gateway-event) gateway-runtime) gateway-emit-event))
+(defun gateway-emit-event (runtime event)
+  "Record an event in the gateway's event log and return the updated runtime."
+  (declare (type gateway-runtime runtime)
+           (type gateway-event event))
+  (push event (gateway-runtime-event-log runtime))
+  runtime)
+
+(declaim (ftype (function (gateway-runtime gateway-method-event) gateway-runtime) gateway-emit-method-event))
+(defun gateway-emit-method-event (runtime event)
+  "Record a method-style event in the gateway's event log."
+  (declare (type gateway-runtime runtime)
+           (type gateway-method-event event))
+  ;; Store as a tagged cons so tests can distinguish event types
+  (push (cons :method-event event) (gateway-runtime-event-log runtime))
+  runtime)
+
+;;; --- Connect challenge ---
+
+(declaim (ftype (function (gateway-runtime) (values gateway-event gateway-connection)) gateway-make-challenge))
+(defun gateway-make-challenge (runtime)
+  "Create a connect.challenge event and a new connection state.
+Returns (values challenge-event connection)."
+  (declare (type gateway-runtime runtime)
+           (ignorable runtime))
+  (let* ((nonce (generate-nonce))
+         (event (make-gateway-event
+                 :event "connect.challenge"
+                 :payload (list :nonce nonce)))
+         (conn (make-gateway-connection :nonce nonce)))
+    (values event conn)))
+
+;;; --- Connect method handler ---
+
+(declaim (ftype (function (gateway-runtime string list gateway-connection) gateway-response) handle-connect))
+(defun handle-connect (runtime request-id params connection)
+  "Handle the 'connect' method. Validates protocol version and auth."
+  (declare (type gateway-runtime runtime)
+           (type string request-id)
+           (type list params)
+           (type gateway-connection connection))
+  (let ((min-proto (param-get params :min-protocol :|minProtocol|))
+        (max-proto (param-get params :max-protocol :|maxProtocol|))
+        (client (param-get params :client)))
+    ;; Protocol version check
+    (when (and min-proto max-proto)
+      (unless (and (<= min-proto 3) (>= max-proto 3))
+        (return-from handle-connect
+          (make-gateway-response
+           :id request-id
+           :ok-p nil
+           :error-code :protocol-mismatch
+           :error-message "Server requires protocol version 3"))))
+    ;; Mark connection authenticated
+    (setf (gateway-connection-authenticated connection) t)
+    (when (and client (listp client))
+      (let ((cid (param-get client :id :|id|)))
+        (when cid
+          (setf (gateway-connection-client-id connection) cid)))
+      (let ((dn (param-get client :display-name :|displayName|)))
+        (when dn
+          (setf (gateway-connection-client-display-name connection) dn))))
+    (setf (gateway-connection-protocol-version connection) 3)
+    ;; Add connection to runtime
+    (push connection (gateway-runtime-connections runtime))
+    ;; Return success with policy
+    (make-gateway-response
+     :id request-id
+     :ok-p t
+     :result (list :protocol 3
+                   :policy (list :tick-interval-ms
+                                 (gateway-connection-tick-interval-ms connection))))))
+
+;;; --- Session management ---
+
+(declaim (ftype (function (gateway-runtime string string string) gateway-session)
+                gateway-ensure-session))
+(defun gateway-ensure-session (runtime key label agent-id)
+  "Find or create a session with the given KEY."
+  (declare (type gateway-runtime runtime)
+           (type string key label agent-id))
+  (or (find key (gateway-runtime-sessions runtime)
+            :key #'gateway-session-key :test #'string=)
+      (let ((session (make-gateway-session
+                      :key key
+                      :label label
+                      :agent-id agent-id
+                      :created-at (get-universal-time))))
+        (push session (gateway-runtime-sessions runtime))
+        session)))
+
+;;; --- Method handlers ---
+
+(declaim (ftype (function (gateway-runtime string list) gateway-response) handle-sessions-list))
+(defun handle-sessions-list (runtime request-id params)
+  "Handle sessions.list method."
+  (declare (type gateway-runtime runtime)
+           (type string request-id)
+           (type list params))
+  (let* ((limit (or (param-get params :limit :|limit|) 50))
+         (sessions (gateway-runtime-sessions runtime))
+         (limited (if (> (length sessions) limit)
+                      (subseq sessions 0 limit)
+                      sessions))
+         (session-data
+           (mapcar (lambda (s)
+                     (list :key (gateway-session-key s)
+                           :label (gateway-session-label s)
+                           :agent-id (gateway-session-agent-id s)))
+                   limited)))
+    (make-gateway-response
+     :id request-id
+     :ok-p t
+     :result (list :sessions session-data))))
+
+(declaim (ftype (function (gateway-runtime string list) gateway-response) handle-agents-list))
+(defun handle-agents-list (runtime request-id params)
+  "Handle agents.list method."
+  (declare (type gateway-runtime runtime)
+           (type string request-id)
+           (type list params)
+           (ignorable params))
+  (let ((agent-data
+          (mapcar (lambda (a)
+                    (list :id (gateway-agent-id a)
+                          :display-name (gateway-agent-display-name a)))
+                  (gateway-runtime-agents runtime))))
+    (make-gateway-response
+     :id request-id
+     :ok-p t
+     :result (list :agents agent-data))))
+
+(declaim (ftype (function (gateway-runtime string list) gateway-response) handle-chat-send))
+(defun handle-chat-send (runtime request-id params)
+  "Handle chat.send method. Stores message and returns ack."
+  (declare (type gateway-runtime runtime)
+           (type string request-id)
+           (type list params))
+  (let ((session-key (param-get params :session-key :|sessionKey|))
+        (message-text (param-get params :message :|message|))
+        (idempotency-key (param-get params :idempotency-key :|idempotencyKey|)))
+    (declare (ignorable idempotency-key))
+    (cond
+      ((not session-key)
+       (malformed-request-response request-id (list "missing sessionKey")))
+      ((not message-text)
+       (malformed-request-response request-id (list "missing message")))
+      (t
+       (let ((session (find session-key (gateway-runtime-sessions runtime)
+                            :key #'gateway-session-key :test #'string=)))
+         (unless session
+           ;; Auto-create session
+           (setf session (gateway-ensure-session runtime session-key session-key "default"))
+           )
+         ;; Store the user message
+         (let ((msg (make-gateway-message
+                     :role "user"
+                     :content message-text
+                     :timestamp (get-universal-time))))
+           (setf (gateway-session-messages session)
+                 (append (gateway-session-messages session) (list msg))))
+         ;; Emit chat.message method event for the response (simulated assistant echo)
+         (let ((assistant-msg (make-gateway-message
+                               :role "assistant"
+                               :content (format nil "Echo: ~A" message-text)
+                               :timestamp (get-universal-time))))
+           (setf (gateway-session-messages session)
+                 (append (gateway-session-messages session) (list assistant-msg)))
+           ;; Emit a chat.message event
+           (gateway-emit-method-event
+            runtime
+            (make-gateway-method-event
+             :method "chat.message"
+             :params (list :session-key session-key
+                           :role "assistant"
+                           :content (format nil "Echo: ~A" message-text)))))
+         ;; Emit sessions.update event
+         (gateway-emit-method-event
+          runtime
+          (make-gateway-method-event
+           :method "sessions.update"
+           :params (list :session-key session-key
+                         :label (gateway-session-label session))))
+         ;; Return ack
+         (make-gateway-response
+          :id request-id
+          :ok-p t
+          :result (list :queued t)))))))
+
+(declaim (ftype (function (gateway-runtime string list) gateway-response) handle-chat-history))
+(defun handle-chat-history (runtime request-id params)
+  "Handle chat.history method. Returns message history for a session."
+  (declare (type gateway-runtime runtime)
+           (type string request-id)
+           (type list params))
+  (let ((session-key (param-get params :session-key :|sessionKey|))
+        (limit (or (param-get params :limit :|limit|) 50)))
+    (cond
+      ((not session-key)
+       (malformed-request-response request-id (list "missing sessionKey")))
+      (t
+       (let ((session (find session-key (gateway-runtime-sessions runtime)
+                            :key #'gateway-session-key :test #'string=)))
+         (if (not session)
+             (make-gateway-response
+              :id request-id
+              :ok-p t
+              :result (list :messages nil))
+             (let* ((msgs (gateway-session-messages session))
+                    (limited (if (> (length msgs) limit)
+                                 (subseq msgs (- (length msgs) limit))
+                                 msgs))
+                    (message-data
+                      (mapcar (lambda (m)
+                                (list :role (gateway-message-role m)
+                                      :content (gateway-message-content m)
+                                      :timestamp (gateway-message-timestamp m)))
+                              limited)))
+               (make-gateway-response
+                :id request-id
+                :ok-p t
+                :result (list :messages message-data)))))))))
+
+(declaim (ftype (function (gateway-runtime string list) gateway-response) handle-models-list))
+(defun handle-models-list (runtime request-id params)
+  "Handle models.list method."
+  (declare (type gateway-runtime runtime)
+           (type string request-id)
+           (type list params)
+           (ignorable params))
+  (let ((model-data
+          (mapcar (lambda (m)
+                    (list :id (gateway-model-id m)
+                          :name (gateway-model-name m)
+                          :provider (gateway-model-provider m)))
+                  (gateway-runtime-models runtime))))
+    (make-gateway-response
+     :id request-id
+     :ok-p t
+     :result (list :models model-data))))
+
+;;; --- Main request router ---
+
+(declaim (ftype (function (gateway-request &optional gateway-runtime gateway-connection)
+                          gateway-response)
+                gateway-handle-request))
+(defun gateway-handle-request (request &optional runtime connection)
+  "Route a gateway request to the appropriate handler.
+RUNTIME and CONNECTION are optional for backward compatibility.
+When not provided, only basic methods (ping, sessions.list) work."
   (declare (type gateway-request request))
   (let ((request-id (gateway-request-id request))
         (method (gateway-request-method request))
-        (params (gateway-request-params request)))
+        (params (gateway-request-params request))
+        (rt (or runtime (make-default-gateway-runtime)))
+        (conn connection))
     (cond
       ((zerop (length request-id))
        (malformed-request-response "" (list "missing id")))
@@ -53,10 +345,27 @@
        (malformed-request-response request-id (list "missing method")))
       ((not (listp params))
        (malformed-request-response request-id (list "params must be list")))
+      ;; --- Method dispatch ---
+      ((string= method "connect")
+       (if conn
+           (handle-connect rt request-id params conn)
+           (make-gateway-response
+            :id request-id
+            :ok-p nil
+            :error-code :no-connection
+            :error-message "No connection state for connect")))
       ((string= method "ping")
        (make-gateway-response :id request-id :ok-p t :result '(:pong t)))
       ((string= method "sessions.list")
-       (make-gateway-response :id request-id :ok-p t :result '(:sessions ())))
+       (handle-sessions-list rt request-id params))
+      ((string= method "agents.list")
+       (handle-agents-list rt request-id params))
+      ((string= method "chat.send")
+       (handle-chat-send rt request-id params))
+      ((string= method "chat.history")
+       (handle-chat-history rt request-id params))
+      ((string= method "models.list")
+       (handle-models-list rt request-id params))
       (t
        (make-gateway-response
         :id request-id
