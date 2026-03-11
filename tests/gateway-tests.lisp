@@ -107,6 +107,19 @@
     (is (not (nilclaw/gateway:gateway-response-ok-p resp)))
     (is (eq :protocol-mismatch (nilclaw/gateway:gateway-response-error-code resp)))))
 
+(test gateway-connect-rejects-non-integer-protocol-fields
+  "connect should reject malformed non-integer min/max protocol values."
+  (let* ((runtime (nilclaw/gateway:make-gateway-runtime))
+         (conn (nilclaw/gateway:make-gateway-connection :nonce "test-nonce"))
+         (resp-min (nilclaw/gateway:handle-connect
+                    runtime "req-2a" (list :min-protocol "3" :max-protocol 3) conn))
+         (resp-max (nilclaw/gateway:handle-connect
+                    runtime "req-2b" (list :min-protocol 3 :max-protocol "3") conn)))
+    (is (not (nilclaw/gateway:gateway-response-ok-p resp-min)))
+    (is (eq :malformed-request (nilclaw/gateway:gateway-response-error-code resp-min)))
+    (is (not (nilclaw/gateway:gateway-response-ok-p resp-max)))
+    (is (eq :malformed-request (nilclaw/gateway:gateway-response-error-code resp-max)))))
+
 (test gateway-connect-without-connection-state
   "connect method without connection state should fail gracefully."
   (let ((resp (nilclaw/gateway:gateway-handle-request
@@ -197,6 +210,22 @@
              (sessions (getf result :sessions)))
         (is (integerp (getf result :timestamp)))
         (is (<= (length sessions) 3))))))
+
+(test gateway-sessions-list-invalid-limit-falls-back-to-default
+  "sessions.list should treat malformed/non-positive limits as default envelope-safe behavior."
+  (let* ((runtime (nilclaw/gateway:make-gateway-runtime)))
+    (dotimes (i 3)
+      (nilclaw/gateway:gateway-ensure-session
+       runtime (format nil "s-invalid-~A" i) (format nil "Session ~A" i) "agent"))
+    (dolist (bad-limit (list "3" 0 -5))
+      (let* ((resp (nilclaw/gateway:gateway-handle-request
+                    (nilclaw/gateway:make-gateway-request
+                     :id "s3-invalid" :method "sessions.list"
+                     :params (list :limit bad-limit))
+                    runtime))
+             (sessions (getf (nilclaw/gateway:gateway-response-result resp) :sessions)))
+        (is (nilclaw/gateway:gateway-response-ok-p resp))
+        (is (= 3 (length sessions)))))))
 
 ;;; --- agents.list ---
 
@@ -468,6 +497,27 @@
                                    (getf result :|sessionKey|))))
         (is (integerp (getf result :timestamp)))
         (is (= 4 (length (getf result :messages))))))))
+
+(test gateway-chat-history-invalid-limit-falls-back-to-default
+  "chat.history should ignore malformed/non-positive limits rather than erroring."
+  (let* ((runtime (nilclaw/gateway:make-gateway-runtime)))
+    (nilclaw/gateway:gateway-ensure-session runtime "h-sess" "History" "agent-1")
+    (dotimes (i 2)
+      (nilclaw/gateway:gateway-handle-request
+       (nilclaw/gateway:make-gateway-request
+        :id (format nil "h3x-~A" i) :method "chat.send"
+        :params (list :session-key "h-sess" :message (format nil "Msg ~A" i)))
+       runtime))
+    (dolist (bad-limit (list "4" 0 -1))
+      (let* ((resp (nilclaw/gateway:gateway-handle-request
+                    (nilclaw/gateway:make-gateway-request
+                     :id "h3x-fetch" :method "chat.history"
+                     :params (list :session-key "h-sess" :limit bad-limit))
+                    runtime))
+             (messages (getf (nilclaw/gateway:gateway-response-result resp) :messages)))
+        (is (nilclaw/gateway:gateway-response-ok-p resp))
+        ;; 2 sends => 4 messages; default limit preserves all.
+        (is (= 4 (length messages)))))))
 
 (test gateway-chat-history-nonexistent-session
   "chat.history for unknown session returns empty messages."

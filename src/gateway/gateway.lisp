@@ -73,6 +73,14 @@ Tries KEY first, then each ALT-KEY."
    :error-code :malformed-request
    :error-message (format nil "Malformed request:~{ ~a~}" message)))
 
+(declaim (ftype (function (t (integer 1 *)) (integer 1 *)) positive-integer-or-default))
+(defun positive-integer-or-default (value default)
+  "Return VALUE when it is a positive integer, otherwise DEFAULT."
+  (declare (type (integer 1 *) default))
+  (if (and (integerp value) (> value 0))
+      value
+      default))
+
 ;;; --- Nonce generation ---
 
 (declaim (ftype (function () string) generate-nonce))
@@ -127,6 +135,14 @@ Returns (values challenge-event connection)."
         (max-proto (param-get params :max-protocol :|maxProtocol|))
         (client (param-get params :client)))
     ;; Protocol version check
+    (when min-proto
+      (unless (integerp min-proto)
+        (return-from handle-connect
+          (malformed-request-response request-id (list "minProtocol must be integer")))))
+    (when max-proto
+      (unless (integerp max-proto)
+        (return-from handle-connect
+          (malformed-request-response request-id (list "maxProtocol must be integer")))))
     (when (and min-proto max-proto)
       (unless (and (<= min-proto 3) (>= max-proto 3))
         (return-from handle-connect
@@ -184,7 +200,7 @@ Returns (values challenge-event connection)."
   (declare (type gateway-runtime runtime)
            (type string request-id)
            (type list params))
-  (let* ((limit (or (param-get params :limit :|limit|) 50))
+  (let* ((limit (positive-integer-or-default (param-get params :limit :|limit|) 50))
          (sessions (gateway-runtime-sessions runtime))
          (limited (if (> (length sessions) limit)
                       (subseq sessions 0 limit)
@@ -346,7 +362,7 @@ Returns (values challenge-event connection)."
            (type string request-id)
            (type list params))
   (let ((session-key (param-get params :session-key :|sessionKey|))
-        (limit (or (param-get params :limit :|limit|) 50)))
+        (limit (positive-integer-or-default (param-get params :limit :|limit|) 50)))
     (cond
       ((not session-key)
        (malformed-request-response request-id (list "missing sessionKey")))
