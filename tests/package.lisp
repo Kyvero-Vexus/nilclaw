@@ -31,6 +31,10 @@
   :description "Providers compatible module tests"
   :in nilclaw-suite)
 
+(def-suite providers-suite
+  :description "Providers module tests"
+  :in nilclaw-suite)
+
 (def-suite skills-suite
   :description "Skills module tests"
   :in nilclaw-suite)

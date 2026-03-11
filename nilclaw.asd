@@ -46,6 +46,7 @@
       :components
       ((:file "package")
        (:file "types")
+       (:file "http")
        (:file "compatible")))
      (:module "skills"
       :components
@@ -86,6 +87,7 @@
      (:file "agent-dispatcher-tests")
      (:file "memory-sqlite-tests")
      (:file "providers-compatible-tests")
+     (:file "providers-http-tests")
      (:file "skills-tests")
      (:file "bootstrap-tests")
      (:file "cron-tests")

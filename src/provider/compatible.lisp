@@ -7,7 +7,9 @@
   (integration-entrypoint "nilclaw/provider:complete" :type string)
   (enabled t :type boolean)
   (model "openai/gpt-4o-mini" :type string)
-  (max-retries 2 :type (integer 0 10)))
+  (max-retries 2 :type (integer 0 10))
+  (base-url nil :type (or null string))
+  (api-key nil :type (or null string)))
 
 (defstruct provider-request
   (model "" :type string)
