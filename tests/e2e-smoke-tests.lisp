@@ -33,9 +33,14 @@
   (let* ((runtime (nilclaw/agent:make-default-agent-runtime))
          (response (nilclaw/agent:agent-handle-request
                     runtime
-                    (nilclaw/agent:make-agent-request :command "chat.send" :payload '((:message . "hello"))))))
+                    (nilclaw/agent:make-agent-request :command "chat.send" :payload '((:message . "hello")))))
+         (missing (nilclaw/agent:agent-handle-request
+                   runtime
+                   (nilclaw/agent:make-agent-request :command "chat.send" :payload '((:foo . "bar"))))))
     (is (nilclaw/agent:cli-entrypoint-available-p runtime))
-    (is (nilclaw/agent:agent-response-ok-p response))))
+    (is (nilclaw/agent:agent-response-ok-p response))
+    (is (not (nilclaw/agent:agent-response-ok-p missing)))
+    (is (eq :malformed-request (nilclaw/agent:agent-response-code missing)))))
 
 (test e2e-channel-system
   (let* ((cfg (nilclaw/config:make-default-config)))
@@ -145,6 +150,7 @@
       (is (string= "test" (cdar env))))))
 
 (test e2e-provider-abstraction
+  ;; Transient timeout retries then succeeds.
   (let* ((runtime (nilclaw/provider:make-provider-runtime :max-retries 1))
          (request (nilclaw/provider:make-provider-request :model "openai/gpt-4o-mini" :messages '((:role "user" :content "hello"))))
          (attempts 0)
@@ -160,7 +166,39 @@
     (is (nilclaw/provider:provider-result-success-p result))
     (is (= 2 attempts))
     (is (= 2 (nilclaw/provider:provider-result-attempts result)))
-    (is (string= "hello back" (nilclaw/provider:provider-result-content result)))))
+    (is (string= "hello back" (nilclaw/provider:provider-result-content result))))
+  ;; Transient network faults also retry.
+  (let* ((runtime (nilclaw/provider:make-provider-runtime :max-retries 1))
+         (request (nilclaw/provider:make-provider-request :model "openai/gpt-4o-mini" :messages '((:role "user" :content "hello"))))
+         (attempts 0)
+         (result (nilclaw/provider:provider-complete
+                  runtime
+                  request
+                  (lambda (req attempt)
+                    (declare (ignore req))
+                    (setf attempts attempt)
+                    (if (= attempt 1)
+                        (values nil :network-fault)
+                      (values "network recovered" nil))))))
+    (is (nilclaw/provider:provider-result-success-p result))
+    (is (= 2 attempts))
+    (is (= 2 (nilclaw/provider:provider-result-attempts result)))
+    (is (string= "network recovered" (nilclaw/provider:provider-result-content result))))
+  ;; Malformed payloads fail fast and do not retry.
+  (let* ((runtime (nilclaw/provider:make-provider-runtime :max-retries 2))
+         (request (nilclaw/provider:make-provider-request :model "openai/gpt-4o-mini" :messages '((:role "user" :content "hello"))))
+         (attempts 0)
+         (result (nilclaw/provider:provider-complete
+                  runtime
+                  request
+                  (lambda (req attempt)
+                    (declare (ignore req))
+                    (setf attempts attempt)
+                    (values nil :malformed-payload)))))
+    (is (not (nilclaw/provider:provider-result-success-p result)))
+    (is (= 1 attempts))
+    (is (= 1 (nilclaw/provider:provider-result-attempts result)))
+    (is (eq :malformed-payload (nilclaw/provider:provider-result-error-code result)))))
 
 (test e2e-skills-system
   (is (nilclaw/skills:skills-loader-entrypoint-available-p)))
