@@ -73,7 +73,11 @@
       :components
       ((:file "package")
        (:file "types")
-       (:file "agent")))))))
+       (:file "agent")))
+     (:module "subagent"
+      :components
+      ((:file "package")
+       (:file "manager")))))))
 
 (defsystem "nilclaw/tests"
   :description "NilClaw test suite"
@@ -98,4 +102,5 @@
      (:file "agent-root-tests")
      (:file "traceability-linkage-tests")
      (:file "e2e-smoke-tests")
-     (:file "tool-executor-tests")))))
+     (:file "tool-executor-tests")
+     (:file "subagent-tests")))))
