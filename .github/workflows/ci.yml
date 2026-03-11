@@ -12,10 +12,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install SBCL and dependencies
+      - name: Install SBCL and base tooling
         run: |
           sudo apt-get update
-          sudo apt-get install -y sbcl cl-alexandria cl-json cl-ppcre python3
+          sudo apt-get install -y sbcl curl make python3
 
       - name: Install Quicklisp
         run: |
