@@ -118,10 +118,20 @@
             (when port (setf (getf current :port) port)))
           (let ((host (json-getf gw :host)))
             (when host (setf (getf current :host) host)))
+          (let ((url (json-getf gw :url)))
+            (when url (setf (getf current :url) url)))
+          (let ((token (json-getf gw :token)))
+            (when token (setf (getf current :token) token)))
           (let ((rp (json-getf gw :require--pairing)))
             (when (not (null rp)) (setf (getf current :require-pairing) rp)))
           (let ((apb (json-getf gw :allow--public--bind)))
             (when (not (null apb)) (setf (getf current :allow-public-bind) apb)))
+          (let ((keepalive (json-getf gw :keepalive--interval--ms)))
+            (when keepalive (setf (getf current :keepalive-interval-ms) keepalive)))
+          (let ((reconnect-initial (json-getf gw :reconnect--initial--backoff--ms)))
+            (when reconnect-initial (setf (getf current :reconnect-initial-backoff-ms) reconnect-initial)))
+          (let ((reconnect-max (json-getf gw :reconnect--max--backoff--ms)))
+            (when reconnect-max (setf (getf current :reconnect-max-backoff-ms) reconnect-max)))
           (let ((tokens (json-getf gw :paired--tokens)))
             (when tokens (setf (getf current :paired-tokens) tokens)))
           (setf (config-gateway cfg) current))))
@@ -370,6 +380,37 @@
       (let ((gw (config-gateway cfg)))
         (setf (getf gw :host) host)
         (setf (config-gateway cfg) gw))))
+  (let ((url (uiop:getenv "NILCLAW_GATEWAY_URL")))
+    (when url
+      (let ((gw (config-gateway cfg)))
+        (setf (getf gw :url) url)
+        (setf (config-gateway cfg) gw))))
+  (let ((token (uiop:getenv "NILCLAW_GATEWAY_TOKEN")))
+    (when token
+      (let ((gw (config-gateway cfg)))
+        (setf (getf gw :token) token)
+        (setf (config-gateway cfg) gw))))
+  (let ((keepalive-str (uiop:getenv "NILCLAW_GATEWAY_KEEPALIVE_INTERVAL_MS")))
+    (when keepalive-str
+      (let ((keepalive (ignore-errors (parse-integer keepalive-str))))
+        (when keepalive
+          (let ((gw (config-gateway cfg)))
+            (setf (getf gw :keepalive-interval-ms) keepalive)
+            (setf (config-gateway cfg) gw))))))
+  (let ((reconnect-initial-str (uiop:getenv "NILCLAW_GATEWAY_RECONNECT_INITIAL_BACKOFF_MS")))
+    (when reconnect-initial-str
+      (let ((backoff (ignore-errors (parse-integer reconnect-initial-str))))
+        (when backoff
+          (let ((gw (config-gateway cfg)))
+            (setf (getf gw :reconnect-initial-backoff-ms) backoff)
+            (setf (config-gateway cfg) gw))))))
+  (let ((reconnect-max-str (uiop:getenv "NILCLAW_GATEWAY_RECONNECT_MAX_BACKOFF_MS")))
+    (when reconnect-max-str
+      (let ((backoff (ignore-errors (parse-integer reconnect-max-str))))
+        (when backoff
+          (let ((gw (config-gateway cfg)))
+            (setf (getf gw :reconnect-max-backoff-ms) backoff)
+            (setf (config-gateway cfg) gw))))))
   (let ((ws (uiop:getenv "NILCLAW_WORKSPACE")))
     (when ws
       (setf (config-workspace-dir cfg) ws)))

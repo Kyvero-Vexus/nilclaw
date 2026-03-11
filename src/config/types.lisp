@@ -9,6 +9,11 @@
 (defconstant +invalid-default-model-primary+ :invalid-default-model-primary)
 (defconstant +temperature-out-of-range+ :temperature-out-of-range)
 (defconstant +invalid-port+ :invalid-port)
+(defconstant +invalid-gateway-url+ :invalid-gateway-url)
+(defconstant +invalid-gateway-token+ :invalid-gateway-token)
+(defconstant +invalid-keepalive-interval-ms+ :invalid-keepalive-interval-ms)
+(defconstant +invalid-reconnect-initial-backoff-ms+ :invalid-reconnect-initial-backoff-ms)
+(defconstant +invalid-reconnect-max-backoff-ms+ :invalid-reconnect-max-backoff-ms)
 (defconstant +invalid-retry-count+ :invalid-retry-count)
 (defconstant +invalid-backoff-ms+ :invalid-backoff-ms)
 (defconstant +invalid-http-proxy-url+ :invalid-http-proxy-url)
@@ -50,8 +55,13 @@
   ;; Sub-configs as plists for simplicity
   (gateway (list :port 3000
                  :host "127.0.0.1"
+                 :url nil
+                 :token nil
                  :require-pairing t
                  :allow-public-bind nil
+                 :keepalive-interval-ms 30000
+                 :reconnect-initial-backoff-ms 500
+                 :reconnect-max-backoff-ms 30000
                  :pair-rate-limit-per-minute 10
                  :webhook-rate-limit-per-minute 60
                  :idempotency-ttl-secs 300

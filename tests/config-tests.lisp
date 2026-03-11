@@ -186,7 +186,48 @@
   "Gateway default values."
   (let ((cfg (nilclaw/config:make-default-config)))
     (is (= 3000 (getf (nilclaw/config:config-gateway cfg) :port)))
-    (is (string= "127.0.0.1" (getf (nilclaw/config:config-gateway cfg) :host)))))
+    (is (string= "127.0.0.1" (getf (nilclaw/config:config-gateway cfg) :host)))
+    (is (= 30000 (getf (nilclaw/config:config-gateway cfg) :keepalive-interval-ms)))
+    (is (= 500 (getf (nilclaw/config:config-gateway cfg) :reconnect-initial-backoff-ms)))
+    (is (= 30000 (getf (nilclaw/config:config-gateway cfg) :reconnect-max-backoff-ms)))))
+
+(test config-gateway-runtime-flags-parsing
+  "Gateway runtime flags used by OpenClaw clients are parsed."
+  (let* ((cfg (nilclaw/config:parse-config-from-string
+               "{\"gateway\": {\"url\": \"ws://127.0.0.1:3000/ws\", \"token\": \"abc123\", \"keepalive_interval_ms\": 15000, \"reconnect_initial_backoff_ms\": 250, \"reconnect_max_backoff_ms\": 8000}, \"agents\": {\"defaults\": {\"model\": {\"primary\": \"a/b\"}}}}"))
+         (gw (nilclaw/config:config-gateway cfg)))
+    (is (string= "ws://127.0.0.1:3000/ws" (getf gw :url)))
+    (is (string= "abc123" (getf gw :token)))
+    (is (= 15000 (getf gw :keepalive-interval-ms)))
+    (is (= 250 (getf gw :reconnect-initial-backoff-ms)))
+    (is (= 8000 (getf gw :reconnect-max-backoff-ms)))))
+
+(test config-gateway-runtime-flags-validation
+  "Gateway runtime flag validation catches malformed values."
+  ;; invalid URL scheme
+  (let* ((cfg (nilclaw/config:parse-config-from-string
+               "{\"gateway\": {\"url\": \"ftp://bad\"}, \"agents\": {\"defaults\": {\"model\": {\"primary\": \"a/b\"}}}}"))
+         (errors (nilclaw/config:validate-config cfg)))
+    (is (member nilclaw/config:+invalid-gateway-url+
+                (mapcar #'nilclaw/config:validation-error-kind errors))))
+  ;; token cannot contain spaces
+  (let* ((cfg (nilclaw/config:parse-config-from-string
+               "{\"gateway\": {\"token\": \"bad token\"}, \"agents\": {\"defaults\": {\"model\": {\"primary\": \"a/b\"}}}}"))
+         (errors (nilclaw/config:validate-config cfg)))
+    (is (member nilclaw/config:+invalid-gateway-token+
+                (mapcar #'nilclaw/config:validation-error-kind errors))))
+  ;; keepalive must be > 0
+  (let* ((cfg (nilclaw/config:parse-config-from-string
+               "{\"gateway\": {\"keepalive_interval_ms\": 0}, \"agents\": {\"defaults\": {\"model\": {\"primary\": \"a/b\"}}}}"))
+         (errors (nilclaw/config:validate-config cfg)))
+    (is (member nilclaw/config:+invalid-keepalive-interval-ms+
+                (mapcar #'nilclaw/config:validation-error-kind errors))))
+  ;; reconnect max must be >= initial
+  (let* ((cfg (nilclaw/config:parse-config-from-string
+               "{\"gateway\": {\"reconnect_initial_backoff_ms\": 1000, \"reconnect_max_backoff_ms\": 500}, \"agents\": {\"defaults\": {\"model\": {\"primary\": \"a/b\"}}}}"))
+         (errors (nilclaw/config:validate-config cfg)))
+    (is (member nilclaw/config:+invalid-reconnect-max-backoff-ms+
+                (mapcar #'nilclaw/config:validation-error-kind errors)))))
 
 ;;; --- Environment Variable Override ---
 

@@ -151,6 +151,34 @@ Recommended defaults:
 
 Avoid direct public exposure. Use tunnel when external access is required.
 
+#### Gateway runtime flags (OpenClaw parity)
+
+These flags are used by OpenClaw-compatible clients (`openclaw.el`, TUI) and are validated at load time:
+
+| Field | Type | Default | Notes |
+|---|---|---:|---|
+| `url` | string? | `null` | Optional explicit gateway endpoint (`ws://`, `wss://`, `http://`, or `https://`). |
+| `token` | string? | `null` | Optional bearer token. Must not contain spaces. |
+| `keepalive_interval_ms` | u64 | `30000` | Client keepalive ping interval; must be `> 0`. |
+| `reconnect_initial_backoff_ms` | u64 | `500` | Initial reconnect backoff; must be `>= 0`. |
+| `reconnect_max_backoff_ms` | u64 | `30000` | Max reconnect backoff; must be `>= reconnect_initial_backoff_ms`. |
+
+Example:
+
+```json
+{
+  "gateway": {
+    "host": "127.0.0.1",
+    "port": 3000,
+    "url": "ws://127.0.0.1:3000/ws",
+    "token": "replace-with-secret",
+    "keepalive_interval_ms": 15000,
+    "reconnect_initial_backoff_ms": 250,
+    "reconnect_max_backoff_ms": 8000
+  }
+}
+```
+
 ### `autonomy`
 
 - `level`: start with `supervised`.

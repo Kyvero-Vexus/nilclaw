@@ -19,6 +19,11 @@
    #:+invalid-default-model-primary+
    #:+temperature-out-of-range+
    #:+invalid-port+
+   #:+invalid-gateway-url+
+   #:+invalid-gateway-token+
+   #:+invalid-keepalive-interval-ms+
+   #:+invalid-reconnect-initial-backoff-ms+
+   #:+invalid-reconnect-max-backoff-ms+
    #:+invalid-retry-count+
    #:+invalid-backoff-ms+
    #:+invalid-http-proxy-url+

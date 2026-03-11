@@ -39,7 +39,40 @@
       (when (zerop (getf gw :port 0))
         (push (make-validation-error :kind +invalid-port+
                                      :message "Gateway port cannot be 0")
-              errors)))
+              errors))
+      (let ((url (getf gw :url)))
+        (when (and url
+                   (not (or (cl-ppcre:scan "^wss?://" url)
+                            (cl-ppcre:scan "^https?://" url))))
+          (push (make-validation-error :kind +invalid-gateway-url+
+                                       :message "Gateway URL must use ws(s) or http(s) scheme")
+                errors)))
+      (let ((token (getf gw :token)))
+        (when (and token (find #\Space token))
+          (push (make-validation-error :kind +invalid-gateway-token+
+                                       :message "Gateway token cannot contain spaces")
+                errors)))
+      (let ((keepalive (getf gw :keepalive-interval-ms)))
+        (when (and keepalive (<= keepalive 0))
+          (push (make-validation-error :kind +invalid-keepalive-interval-ms+
+                                       :message "Gateway keepalive interval must be > 0")
+                errors)))
+      (let ((reconnect-initial (getf gw :reconnect-initial-backoff-ms)))
+        (when (and reconnect-initial (< reconnect-initial 0))
+          (push (make-validation-error :kind +invalid-reconnect-initial-backoff-ms+
+                                       :message "Gateway reconnect initial backoff must be >= 0")
+                errors)))
+      (let ((reconnect-max (getf gw :reconnect-max-backoff-ms)))
+        (when (and reconnect-max (< reconnect-max 0))
+          (push (make-validation-error :kind +invalid-reconnect-max-backoff-ms+
+                                       :message "Gateway reconnect max backoff must be >= 0")
+                errors)))
+      (let ((reconnect-initial (getf gw :reconnect-initial-backoff-ms))
+            (reconnect-max (getf gw :reconnect-max-backoff-ms)))
+        (when (and reconnect-initial reconnect-max (> reconnect-initial reconnect-max))
+          (push (make-validation-error :kind +invalid-reconnect-max-backoff-ms+
+                                       :message "Gateway reconnect max backoff must be >= initial backoff")
+                errors))))
               
     (let ((rel (config-reliability cfg)))
       (let ((retries (getf rel :provider-retries)))
