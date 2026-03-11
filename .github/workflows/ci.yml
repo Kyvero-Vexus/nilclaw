@@ -22,12 +22,19 @@ jobs:
           curl -sO https://beta.quicklisp.org/quicklisp.lisp
           sbcl --noinform --non-interactive \
             --load quicklisp.lisp \
-            --eval '(quicklisp-quickstart:install)' \
-            --eval '(ql:add-to-init-file)'
+            --eval '(quicklisp-quickstart:install)'
+          cat >> ~/.sbclrc <<'EOF'
+          #-quicklisp
+          (let ((quicklisp-init (merge-pathnames "quicklisp/setup.lisp"
+                                                 (user-homedir-pathname))))
+            (when (probe-file quicklisp-init)
+              (load quicklisp-init)))
+          EOF
 
       - name: Install FiveAM
         run: |
           sbcl --noinform --non-interactive \
+            --load ~/quicklisp/setup.lisp \
             --eval '(ql:quickload :fiveam)'
 
       - name: Load system
