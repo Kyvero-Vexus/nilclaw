@@ -12,13 +12,21 @@ same general problem space as NullClaw, with an emphasis on:
 
 ## Status
 
-NilClaw is **early-stage and not yet production-ready**.
+NilClaw is **in active migration-readiness work and not yet production-ready**.
+
+Current completion criteria for cutover are strict:
+
+1. **Full conformance to frozen specs/test corpus**, and
+2. **At least feature parity with NullClaw** on the required migration surface.
+
+Until both are met (with evidence), this remains pre-cutover.
 
 Current work is focused on:
 
 1. extracting product behavior into portable specifications,
-2. building a typed Common Lisp implementation, and
-3. validating compatibility with spec-oriented tests.
+2. building a typed Common Lisp implementation,
+3. validating compatibility with deterministic spec-oriented tests, and
+4. closing protocol/runtime parity gaps used by production clients.
 
 ## Repository Layout
 
