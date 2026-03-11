@@ -148,12 +148,15 @@ Returns (values challenge-event connection)."
     ;; Add connection to runtime
     (push connection (gateway-runtime-connections runtime))
     ;; Return success with policy
-    (make-gateway-response
-     :id request-id
-     :ok-p t
-     :result (list :protocol 3
-                   :policy (list :tick-interval-ms
-                                 (gateway-connection-tick-interval-ms connection))))))
+    (let ((ts (get-universal-time))
+          (tick (gateway-connection-tick-interval-ms connection)))
+      (make-gateway-response
+       :id request-id
+       :ok-p t
+       :result (list :protocol 3
+                     :timestamp ts
+                     :policy (list :tick-interval-ms tick
+                                   :|tickIntervalMs| tick))))))
 
 ;;; --- Session management ---
 
@@ -186,16 +189,25 @@ Returns (values challenge-event connection)."
          (limited (if (> (length sessions) limit)
                       (subseq sessions 0 limit)
                       sessions))
+         (ts (get-universal-time))
          (session-data
            (mapcar (lambda (s)
-                     (list :key (gateway-session-key s)
-                           :label (gateway-session-label s)
-                           :agent-id (gateway-session-agent-id s)))
+                     (let ((k (gateway-session-key s))
+                           (label (gateway-session-label s))
+                           (aid (gateway-session-agent-id s)))
+                       (list :key k
+                             :session-key k
+                             :|sessionKey| k
+                             :label label
+                             :agent-id aid
+                             :|agentId| aid
+                             :timestamp ts)))
                    limited)))
     (make-gateway-response
      :id request-id
      :ok-p t
-     :result (list :sessions session-data))))
+     :result (list :timestamp ts
+                   :sessions session-data))))
 
 (declaim (ftype (function (gateway-runtime string list) gateway-response) handle-agents-list))
 (defun handle-agents-list (runtime request-id params)
@@ -204,15 +216,21 @@ Returns (values challenge-event connection)."
            (type string request-id)
            (type list params)
            (ignorable params))
-  (let ((agent-data
-          (mapcar (lambda (a)
-                    (list :id (gateway-agent-id a)
-                          :display-name (gateway-agent-display-name a)))
-                  (gateway-runtime-agents runtime))))
+  (let* ((ts (get-universal-time))
+         (agent-data
+           (mapcar (lambda (a)
+                     (let ((id (gateway-agent-id a))
+                           (dn (gateway-agent-display-name a)))
+                       (list :id id
+                             :display-name dn
+                             :|displayName| dn
+                             :timestamp ts)))
+                   (gateway-runtime-agents runtime))))
     (make-gateway-response
      :id request-id
      :ok-p t
-     :result (list :agents agent-data))))
+     :result (list :timestamp ts
+                   :agents agent-data))))
 
 (declaim (ftype (function (gateway-runtime string list) gateway-response) handle-chat-send))
 (defun handle-chat-send (runtime request-id params)
@@ -297,7 +315,9 @@ Returns (values challenge-event connection)."
                 (make-gateway-method-event
                  :method "sessions.update"
                  :params (list :session-key session-key
-                               :label (gateway-session-label session))))
+                               :|sessionKey| session-key
+                               :label (gateway-session-label session)
+                               :timestamp (get-universal-time))))
                ;; Return ack
                (make-gateway-response
                 :id request-id
@@ -337,21 +357,30 @@ Returns (values challenge-event connection)."
              (make-gateway-response
               :id request-id
               :ok-p t
-              :result (list :messages nil))
+              :result (list :session-key session-key
+                            :|sessionKey| session-key
+                            :timestamp (get-universal-time)
+                            :messages nil))
              (let* ((msgs (gateway-session-messages session))
                     (limited (if (> (length msgs) limit)
                                  (subseq msgs (- (length msgs) limit))
                                  msgs))
+                    (ts (get-universal-time))
                     (message-data
                       (mapcar (lambda (m)
-                                (list :role (gateway-message-role m)
-                                      :content (gateway-message-content m)
-                                      :timestamp (gateway-message-timestamp m)))
+                                (let ((txt (gateway-message-content m)))
+                                  (list :role (gateway-message-role m)
+                                        :content txt
+                                        :content-parts (list (list :type "text" :text txt))
+                                        :timestamp (gateway-message-timestamp m))))
                               limited)))
                (make-gateway-response
                 :id request-id
                 :ok-p t
-                :result (list :messages message-data)))))))))
+                :result (list :session-key session-key
+                              :|sessionKey| session-key
+                              :timestamp ts
+                              :messages message-data)))))))))
 
 (declaim (ftype (function (gateway-runtime string list) gateway-response) handle-models-list))
 (defun handle-models-list (runtime request-id params)
@@ -360,16 +389,22 @@ Returns (values challenge-event connection)."
            (type string request-id)
            (type list params)
            (ignorable params))
-  (let ((model-data
-          (mapcar (lambda (m)
-                    (list :id (gateway-model-id m)
-                          :name (gateway-model-name m)
-                          :provider (gateway-model-provider m)))
-                  (gateway-runtime-models runtime))))
+  (let* ((ts (get-universal-time))
+         (model-data
+           (mapcar (lambda (m)
+                     (let ((id (gateway-model-id m))
+                           (name (gateway-model-name m))
+                           (provider (gateway-model-provider m)))
+                       (list :id id
+                             :name name
+                             :provider provider
+                             :timestamp ts)))
+                   (gateway-runtime-models runtime))))
     (make-gateway-response
      :id request-id
      :ok-p t
-     :result (list :models model-data))))
+     :result (list :timestamp ts
+                   :models model-data))))
 
 ;;; --- Main request router ---
 

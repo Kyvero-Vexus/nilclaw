@@ -69,9 +69,12 @@
     (let* ((result (nilclaw/gateway:gateway-response-result resp))
            (proto (getf result :protocol))
            (policy (getf result :policy))
-           (tick-ms (getf policy :tick-interval-ms)))
+           (tick-ms (getf policy :tick-interval-ms))
+           (tick-ms-camel (getf policy :|tickIntervalMs|)))
       (is (= 3 proto))
+      (is (integerp (getf result :timestamp)))
       (is (numberp tick-ms))
+      (is (= tick-ms tick-ms-camel))
       (is (> tick-ms 0)))))
 
 (test gateway-connect-protocol-mismatch
@@ -128,7 +131,9 @@
                 (nilclaw/gateway:make-gateway-request :id "s1" :method "sessions.list" :params '())
                 runtime)))
     (is (nilclaw/gateway:gateway-response-ok-p resp))
-    (is (equal nil (getf (nilclaw/gateway:gateway-response-result resp) :sessions)))))
+    (let ((result (nilclaw/gateway:gateway-response-result resp)))
+      (is (integerp (getf result :timestamp)))
+      (is (equal nil (getf result :sessions))))))
 
 (test gateway-sessions-list-with-data
   "sessions.list returns sessions that were registered."
@@ -140,8 +145,18 @@
                  (nilclaw/gateway:make-gateway-request :id "s2" :method "sessions.list" :params '())
                  runtime)))
       (is (nilclaw/gateway:gateway-response-ok-p resp))
-      (let ((sessions (getf (nilclaw/gateway:gateway-response-result resp) :sessions)))
-        (is (= 2 (length sessions)))))))
+      (let* ((result (nilclaw/gateway:gateway-response-result resp))
+             (sessions (getf result :sessions))
+             (first-session (first sessions)))
+        (is (integerp (getf result :timestamp)))
+        (is (= 2 (length sessions)))
+        (is (string= (getf first-session :key)
+                     (or (getf first-session :session-key)
+                         (getf first-session :|sessionKey|))))
+        (is (stringp (getf first-session :label)))
+        (is (string= (getf first-session :agent-id)
+                     (getf first-session :|agentId|)))
+        (is (integerp (getf first-session :timestamp)))))))
 
 (test gateway-sessions-list-respects-limit
   "sessions.list with :limit param should cap the returned count."
@@ -154,7 +169,10 @@
                   :id "s3" :method "sessions.list" :params (list :limit 3))
                  runtime)))
       (is (nilclaw/gateway:gateway-response-ok-p resp))
-      (is (<= (length (getf (nilclaw/gateway:gateway-response-result resp) :sessions)) 3)))))
+      (let* ((result (nilclaw/gateway:gateway-response-result resp))
+             (sessions (getf result :sessions)))
+        (is (integerp (getf result :timestamp)))
+        (is (<= (length sessions) 3))))))
 
 ;;; --- agents.list ---
 
@@ -165,7 +183,9 @@
                 (nilclaw/gateway:make-gateway-request :id "a1" :method "agents.list" :params '())
                 runtime)))
     (is (nilclaw/gateway:gateway-response-ok-p resp))
-    (is (equal nil (getf (nilclaw/gateway:gateway-response-result resp) :agents)))))
+    (let ((result (nilclaw/gateway:gateway-response-result resp)))
+      (is (integerp (getf result :timestamp)))
+      (is (equal nil (getf result :agents))))))
 
 (test gateway-agents-list-with-data
   "agents.list returns registered agents."
@@ -178,12 +198,17 @@
                 (nilclaw/gateway:make-gateway-request :id "a2" :method "agents.list" :params '())
                 runtime)))
     (is (nilclaw/gateway:gateway-response-ok-p resp))
-    (let ((agents (getf (nilclaw/gateway:gateway-response-result resp) :agents)))
+    (let* ((result (nilclaw/gateway:gateway-response-result resp))
+           (agents (getf result :agents)))
+      (is (integerp (getf result :timestamp)))
       (is (= 2 (length agents)))
       ;; Check first agent has expected structure
       (let ((first-agent (first agents)))
         (is (stringp (getf first-agent :id)))
-        (is (stringp (getf first-agent :display-name)))))))
+        (is (stringp (getf first-agent :display-name)))
+        (is (string= (getf first-agent :display-name)
+                     (getf first-agent :|displayName|)))
+        (is (integerp (getf first-agent :timestamp)))))))
 
 ;;; --- chat.send ---
 
@@ -242,7 +267,12 @@
         (is (string= "text" (getf (first parts) :type)))
         (is (stringp (getf (first parts) :text))))
       (is (string= "sessions.update"
-                    (nilclaw/gateway:gateway-method-event-method second-event))))))
+                    (nilclaw/gateway:gateway-method-event-method second-event)))
+      (let ((session-params (nilclaw/gateway:gateway-method-event-params second-event)))
+        (is (string= "chat-sess" (or (getf session-params :session-key)
+                                       (getf session-params :|sessionKey|))))
+        (is (string= "Chat Session" (getf session-params :label)))
+        (is (integerp (getf session-params :timestamp)))))))
 
 (test gateway-chat-send-emits-chat-streaming-events
   "chat.send should emit event=chat frames with state=delta and state=final."
@@ -344,7 +374,11 @@
                   :params (list :session-key "h-sess"))
                  runtime)))
       (is (nilclaw/gateway:gateway-response-ok-p resp))
-      (is (equal nil (getf (nilclaw/gateway:gateway-response-result resp) :messages))))))
+      (let ((result (nilclaw/gateway:gateway-response-result resp)))
+        (is (string= "h-sess" (or (getf result :session-key)
+                                   (getf result :|sessionKey|))))
+        (is (integerp (getf result :timestamp)))
+        (is (equal nil (getf result :messages)))))))
 
 (test gateway-chat-history-returns-messages
   "chat.history returns messages that were sent via chat.send."
@@ -368,12 +402,21 @@
                   :params (list :session-key "h-sess"))
                  runtime)))
       (is (nilclaw/gateway:gateway-response-ok-p resp))
-      (let ((messages (getf (nilclaw/gateway:gateway-response-result resp) :messages)))
+      (let* ((result (nilclaw/gateway:gateway-response-result resp))
+             (messages (getf result :messages))
+             (first-message (first messages))
+             (parts (getf first-message :content-parts)))
+        (is (string= "h-sess" (or (getf result :session-key)
+                                   (getf result :|sessionKey|))))
+        (is (integerp (getf result :timestamp)))
         ;; 2 sends × 2 messages each (user + assistant echo) = 4
         (is (= 4 (length messages)))
         ;; First message should be user/First
-        (is (string= "user" (getf (first messages) :role)))
-        (is (string= "First" (getf (first messages) :content)))))))
+        (is (string= "user" (getf first-message :role)))
+        (is (string= "First" (getf first-message :content)))
+        (is (listp parts))
+        (is (string= "text" (getf (first parts) :type)))
+        (is (string= "First" (getf (first parts) :text)))))))
 
 (test gateway-chat-history-respects-limit
   "chat.history with limit returns only the last N messages."
@@ -393,7 +436,11 @@
                   :params (list :session-key "h-sess" :limit 4))
                  runtime)))
       (is (nilclaw/gateway:gateway-response-ok-p resp))
-      (is (= 4 (length (getf (nilclaw/gateway:gateway-response-result resp) :messages)))))))
+      (let ((result (nilclaw/gateway:gateway-response-result resp)))
+        (is (string= "h-sess" (or (getf result :session-key)
+                                   (getf result :|sessionKey|))))
+        (is (integerp (getf result :timestamp)))
+        (is (= 4 (length (getf result :messages))))))))
 
 (test gateway-chat-history-nonexistent-session
   "chat.history for unknown session returns empty messages."
@@ -404,7 +451,11 @@
                  :params (list :session-key "no-such-session"))
                 runtime)))
     (is (nilclaw/gateway:gateway-response-ok-p resp))
-    (is (equal nil (getf (nilclaw/gateway:gateway-response-result resp) :messages)))))
+    (let ((result (nilclaw/gateway:gateway-response-result resp)))
+      (is (string= "no-such-session" (or (getf result :session-key)
+                                           (getf result :|sessionKey|))))
+      (is (integerp (getf result :timestamp)))
+      (is (equal nil (getf result :messages))))))
 
 (test gateway-chat-history-missing-session-key
   "chat.history without sessionKey should fail."
@@ -426,7 +477,9 @@
                 (nilclaw/gateway:make-gateway-request :id "m1" :method "models.list" :params '())
                 runtime)))
     (is (nilclaw/gateway:gateway-response-ok-p resp))
-    (is (equal nil (getf (nilclaw/gateway:gateway-response-result resp) :models)))))
+    (let ((result (nilclaw/gateway:gateway-response-result resp)))
+      (is (integerp (getf result :timestamp)))
+      (is (equal nil (getf result :models))))))
 
 (test gateway-models-list-with-data
   "models.list returns registered models with correct structure."
@@ -439,12 +492,15 @@
                 (nilclaw/gateway:make-gateway-request :id "m2" :method "models.list" :params '())
                 runtime)))
     (is (nilclaw/gateway:gateway-response-ok-p resp))
-    (let ((models (getf (nilclaw/gateway:gateway-response-result resp) :models)))
+    (let* ((result (nilclaw/gateway:gateway-response-result resp))
+           (models (getf result :models)))
+      (is (integerp (getf result :timestamp)))
       (is (= 2 (length models)))
       (let ((first-model (first models)))
         (is (string= "claude-3" (getf first-model :id)))
         (is (string= "Claude 3" (getf first-model :name)))
-        (is (string= "anthropic" (getf first-model :provider)))))))
+        (is (string= "anthropic" (getf first-model :provider)))
+        (is (integerp (getf first-model :timestamp)))))))
 
 ;;; --- Event ordering ---
 
