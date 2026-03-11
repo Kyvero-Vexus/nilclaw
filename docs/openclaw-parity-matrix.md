@@ -1,7 +1,7 @@
 # OpenClaw ↔ Nilclaw Required-Path Parity Matrix (L0)
 
 Status: in progress (blocking L0 closure)
-Last updated: 2026-03-11 00:53 UTC
+Last updated: 2026-03-11 01:54 UTC
 
 ## Scope
 
@@ -33,12 +33,12 @@ Required production paths for cutover readiness:
 
 ## Remaining L0 blocker statement
 
-L0 denominator ambiguity is closed; current blocker is **breadth/depth protocol parity proof** against required OpenClaw production semantics (especially sessions/chat/tools event envelopes and agent runtime lifecycle semantics), expressed as explicit executable tests and/or linked implementation tasks.
+L0 denominator ambiguity is closed and a first production method/event denominator now exists at `docs/openclaw-production-method-event-inventory.md` (10 line items; 10/10 pass-backed at method/event presence level). Current blocker is **field-level protocol/event-envelope parity depth** (response/event payload shape fidelity + runtime lifecycle edge semantics), plus extending the same inventory process to OpenClaw TUI production-used surfaces.
 
 ## Immediate burn-down steps
 
-1. Produce a required-method/event inventory for production-used session/chat/tool/gateway surfaces.
-2. Bind each inventory line item to an existing nilclaw test ID; mark uncovered items explicitly.
-3. For each uncovered semantics cluster, open discovered-from child issues under L0 and attach failing tests first.
-4. Implement until matrix has no uncovered required semantics for L0 scope.
-5. Re-run `make test` + traceability and attach evidence to beads issues.
+1. Expand denominator to include OpenClaw TUI production-used methods/events; append inventory as v2.
+2. Add failing tests for envelope-level parity fields (chat.message/session.update/history payload shape, model metadata, connect challenge fields).
+3. Bind each new parity field/semantic to explicit test IDs in this matrix.
+4. Re-run `make test` + traceability and attach evidence to beads issues.
+5. Close L0 children once uncovered semantics are exhausted or pushed into explicit discovered-from implementation tasks.
