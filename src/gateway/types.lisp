@@ -5,12 +5,14 @@
 (defstruct gateway-event
   "An outbound event frame from gateway to client."
   (event "" :type string)
-  (payload nil :type list))
+  (payload nil :type list)
+  (seq 0 :type (integer 0 *)))
 
 (defstruct gateway-method-event
   "A method-style event frame (e.g., chat.message, sessions.update)."
   (method "" :type string)
-  (params nil :type list))
+  (params nil :type list)
+  (seq 0 :type (integer 0 *)))
 
 ;;; --- Session store (in-memory) ---
 
@@ -53,3 +55,14 @@
   (client-display-name "" :type string)
   (protocol-version 3 :type integer)
   (tick-interval-ms 30000 :type integer))
+
+;;; --- Event stream state ---
+
+(defstruct event-stream
+  "Tracks event stream state for ordering, dedupe, and reconnect."
+  (next-seq 1 :type (integer 0 *))         ; next sequence number to assign
+  (emitted nil :type list)                  ; list of emitted events with seq
+  (seen-ids nil :type list)                 ; idempotency keys already processed (for dedupe)
+  (last-ack-seq 0 :type (integer 0 *))     ; last seq acknowledged by client
+  (connected-p t :type boolean)             ; whether client is currently connected
+  (reconnect-count 0 :type (integer 0 *))) ; number of reconnections

@@ -33,10 +33,12 @@
            #:gateway-event
            #:gateway-event-event
            #:gateway-event-payload
+           #:gateway-event-seq
            #:make-gateway-event
            #:gateway-method-event
            #:gateway-method-event-method
            #:gateway-method-event-params
+           #:gateway-method-event-seq
            #:make-gateway-method-event
            #:gateway-emit-event
            #:gateway-emit-method-event
@@ -84,4 +86,23 @@
            #:handle-agents-list
            #:handle-chat-send
            #:handle-chat-history
-           #:handle-models-list))
+           #:handle-models-list
+           ;; Event stream semantics
+           #:event-stream
+           #:event-stream-next-seq
+           #:event-stream-emitted
+           #:event-stream-seen-ids
+           #:event-stream-last-ack-seq
+           #:event-stream-connected-p
+           #:event-stream-reconnect-count
+           #:make-event-stream
+           #:make-default-event-stream
+           #:stream-emit
+           #:stream-seen-p
+           #:stream-mark-seen
+           #:stream-emit-deduped
+           #:stream-events-since
+           #:stream-ack
+           #:stream-disconnect
+           #:stream-reconnect
+           #:stream-replay-after-reconnect))

@@ -372,3 +372,93 @@ When not provided, only basic methods (ping, sessions.list) work."
         :ok-p nil
         :error-code :unknown-method
         :error-message (format nil "Unknown method: ~a" method))))))
+
+;;; ====================================================================
+;;; Event Stream Semantics (ordering, dedupe, reconnect)
+;;; ====================================================================
+
+(declaim (ftype (function () event-stream) make-default-event-stream))
+(defun make-default-event-stream ()
+  "Create a fresh event stream."
+  (make-event-stream))
+
+(declaim (ftype (function (event-stream string list) (values gateway-method-event event-stream))
+                stream-emit))
+(defun stream-emit (stream method params)
+  "Emit a sequenced method event into STREAM. Returns the event and updated stream."
+  (declare (type event-stream stream)
+           (type string method)
+           (type list params))
+  (let* ((seq (event-stream-next-seq stream))
+         (event (make-gateway-method-event :method method :params params :seq seq)))
+    (setf (event-stream-next-seq stream) (1+ seq))
+    (push event (event-stream-emitted stream))
+    (values event stream)))
+
+(declaim (ftype (function (event-stream string) boolean) stream-seen-p))
+(defun stream-seen-p (stream idempotency-key)
+  "Check whether IDEMPOTENCY-KEY has already been processed."
+  (declare (type event-stream stream)
+           (type string idempotency-key))
+  (member idempotency-key (event-stream-seen-ids stream) :test #'string=)
+  ;; Return boolean
+  (if (member idempotency-key (event-stream-seen-ids stream) :test #'string=) t nil))
+
+(declaim (ftype (function (event-stream string) event-stream) stream-mark-seen))
+(defun stream-mark-seen (stream idempotency-key)
+  "Mark IDEMPOTENCY-KEY as seen for dedupe."
+  (declare (type event-stream stream)
+           (type string idempotency-key))
+  (push idempotency-key (event-stream-seen-ids stream))
+  stream)
+
+(declaim (ftype (function (event-stream string list string) (values (or null gateway-method-event) event-stream))
+                stream-emit-deduped))
+(defun stream-emit-deduped (stream method params idempotency-key)
+  "Emit event only if IDEMPOTENCY-KEY has not been seen. Returns (values event-or-nil stream)."
+  (declare (type event-stream stream)
+           (type string method idempotency-key)
+           (type list params))
+  (if (stream-seen-p stream idempotency-key)
+      (values nil stream)
+      (progn
+        (stream-mark-seen stream idempotency-key)
+        (stream-emit stream method params))))
+
+(declaim (ftype (function (event-stream (integer 0 *)) list) stream-events-since))
+(defun stream-events-since (stream last-seq)
+  "Return events emitted after LAST-SEQ, in emission order (ascending seq)."
+  (declare (type event-stream stream)
+           (type (integer 0 *) last-seq))
+  (sort (remove-if (lambda (e) (<= (gateway-method-event-seq e) last-seq))
+                   (copy-list (event-stream-emitted stream)))
+        #'< :key #'gateway-method-event-seq))
+
+(declaim (ftype (function (event-stream (integer 0 *)) event-stream) stream-ack))
+(defun stream-ack (stream seq)
+  "Acknowledge events up to SEQ. Allows pruning if desired."
+  (declare (type event-stream stream)
+           (type (integer 0 *) seq))
+  (setf (event-stream-last-ack-seq stream) seq)
+  stream)
+
+(declaim (ftype (function (event-stream) event-stream) stream-disconnect))
+(defun stream-disconnect (stream)
+  "Mark stream as disconnected."
+  (declare (type event-stream stream))
+  (setf (event-stream-connected-p stream) nil)
+  stream)
+
+(declaim (ftype (function (event-stream) event-stream) stream-reconnect))
+(defun stream-reconnect (stream)
+  "Mark stream as reconnected. Increments reconnect count."
+  (declare (type event-stream stream))
+  (setf (event-stream-connected-p stream) t)
+  (incf (event-stream-reconnect-count stream))
+  stream)
+
+(declaim (ftype (function (event-stream) list) stream-replay-after-reconnect))
+(defun stream-replay-after-reconnect (stream)
+  "Return events that need replay after reconnect (events since last ack)."
+  (declare (type event-stream stream))
+  (stream-events-since stream (event-stream-last-ack-seq stream)))

@@ -441,3 +441,179 @@
                                  (nilclaw/gateway:gateway-connection-nonce conn)))))
     ;; All nonces should be unique (high probability with random component)
     (is (= 10 (length (remove-duplicates nonces :test #'string=))))))
+
+;;; ====================================================================
+;;; Event Stream Semantics Tests
+;;; ====================================================================
+
+(test stream-emit-assigns-monotonic-seq
+  "Emitted events must have strictly increasing sequence numbers."
+  (let ((stream (nilclaw/gateway:make-default-event-stream)))
+    (multiple-value-bind (e1 s1) (nilclaw/gateway:stream-emit stream "chat.message" '(:data "a"))
+      (declare (ignorable s1))
+      (multiple-value-bind (e2 s2) (nilclaw/gateway:stream-emit stream "chat.message" '(:data "b"))
+        (declare (ignorable s2))
+        (multiple-value-bind (e3 _s3) (nilclaw/gateway:stream-emit stream "sessions.update" '(:key "x"))
+          (declare (ignorable _s3))
+          (is (= 1 (nilclaw/gateway:gateway-method-event-seq e1)))
+          (is (= 2 (nilclaw/gateway:gateway-method-event-seq e2)))
+          (is (= 3 (nilclaw/gateway:gateway-method-event-seq e3)))
+          ;; Strict monotonic ordering
+          (is (< (nilclaw/gateway:gateway-method-event-seq e1)
+                 (nilclaw/gateway:gateway-method-event-seq e2)
+                 (nilclaw/gateway:gateway-method-event-seq e3))))))))
+
+(test stream-events-since-returns-ordered-subset
+  "stream-events-since returns only events after given seq, in order."
+  (let ((stream (nilclaw/gateway:make-default-event-stream)))
+    (nilclaw/gateway:stream-emit stream "a" '())
+    (nilclaw/gateway:stream-emit stream "b" '())
+    (nilclaw/gateway:stream-emit stream "c" '())
+    (nilclaw/gateway:stream-emit stream "d" '())
+    ;; Get events since seq 2
+    (let ((events (nilclaw/gateway:stream-events-since stream 2)))
+      (is (= 2 (length events)))
+      (is (= 3 (nilclaw/gateway:gateway-method-event-seq (first events))))
+      (is (= 4 (nilclaw/gateway:gateway-method-event-seq (second events))))
+      (is (string= "c" (nilclaw/gateway:gateway-method-event-method (first events))))
+      (is (string= "d" (nilclaw/gateway:gateway-method-event-method (second events)))))))
+
+(test stream-events-since-zero-returns-all
+  "stream-events-since 0 returns all events."
+  (let ((stream (nilclaw/gateway:make-default-event-stream)))
+    (dotimes (i 5)
+      (nilclaw/gateway:stream-emit stream (format nil "e~A" i) '()))
+    (is (= 5 (length (nilclaw/gateway:stream-events-since stream 0))))))
+
+(test stream-dedupe-prevents-duplicate-emission
+  "stream-emit-deduped should suppress duplicate idempotency keys."
+  (let ((stream (nilclaw/gateway:make-default-event-stream)))
+    ;; First emit succeeds
+    (multiple-value-bind (e1 _s1)
+        (nilclaw/gateway:stream-emit-deduped stream "chat.send" '(:msg "hi") "idem-1")
+      (declare (ignorable _s1))
+      (is (not (null e1)))
+      (is (= 1 (nilclaw/gateway:gateway-method-event-seq e1))))
+    ;; Duplicate with same key is suppressed
+    (multiple-value-bind (e2 _s2)
+        (nilclaw/gateway:stream-emit-deduped stream "chat.send" '(:msg "hi") "idem-1")
+      (declare (ignorable _s2))
+      (is (null e2)))
+    ;; Different key succeeds
+    (multiple-value-bind (e3 _s3)
+        (nilclaw/gateway:stream-emit-deduped stream "chat.send" '(:msg "bye") "idem-2")
+      (declare (ignorable _s3))
+      (is (not (null e3)))
+      (is (= 2 (nilclaw/gateway:gateway-method-event-seq e3))))))
+
+(test stream-seen-p-tracks-keys
+  "stream-seen-p correctly reports seen/unseen keys."
+  (let ((stream (nilclaw/gateway:make-default-event-stream)))
+    (is (not (nilclaw/gateway:stream-seen-p stream "key-1")))
+    (nilclaw/gateway:stream-mark-seen stream "key-1")
+    (is (nilclaw/gateway:stream-seen-p stream "key-1"))
+    (is (not (nilclaw/gateway:stream-seen-p stream "key-2")))))
+
+(test stream-ack-advances-last-ack
+  "stream-ack updates last-ack-seq."
+  (let ((stream (nilclaw/gateway:make-default-event-stream)))
+    (is (= 0 (nilclaw/gateway:event-stream-last-ack-seq stream)))
+    (nilclaw/gateway:stream-ack stream 5)
+    (is (= 5 (nilclaw/gateway:event-stream-last-ack-seq stream)))
+    (nilclaw/gateway:stream-ack stream 10)
+    (is (= 10 (nilclaw/gateway:event-stream-last-ack-seq stream)))))
+
+(test stream-disconnect-reconnect-cycle
+  "Disconnect/reconnect cycle updates state correctly."
+  (let ((stream (nilclaw/gateway:make-default-event-stream)))
+    (is (nilclaw/gateway:event-stream-connected-p stream))
+    (is (= 0 (nilclaw/gateway:event-stream-reconnect-count stream)))
+    ;; Disconnect
+    (nilclaw/gateway:stream-disconnect stream)
+    (is (not (nilclaw/gateway:event-stream-connected-p stream)))
+    ;; Reconnect
+    (nilclaw/gateway:stream-reconnect stream)
+    (is (nilclaw/gateway:event-stream-connected-p stream))
+    (is (= 1 (nilclaw/gateway:event-stream-reconnect-count stream)))
+    ;; Second cycle
+    (nilclaw/gateway:stream-disconnect stream)
+    (nilclaw/gateway:stream-reconnect stream)
+    (is (= 2 (nilclaw/gateway:event-stream-reconnect-count stream)))))
+
+(test stream-replay-after-reconnect-delivers-missed-events
+  "After reconnect, replay should return events since last ack."
+  (let ((stream (nilclaw/gateway:make-default-event-stream)))
+    ;; Emit 5 events
+    (dotimes (i 5)
+      (nilclaw/gateway:stream-emit stream (format nil "event-~A" i) '()))
+    ;; Client acks through seq 3
+    (nilclaw/gateway:stream-ack stream 3)
+    ;; Disconnect and reconnect
+    (nilclaw/gateway:stream-disconnect stream)
+    (nilclaw/gateway:stream-reconnect stream)
+    ;; Replay should return events 4 and 5
+    (let ((replay (nilclaw/gateway:stream-replay-after-reconnect stream)))
+      (is (= 2 (length replay)))
+      (is (= 4 (nilclaw/gateway:gateway-method-event-seq (first replay))))
+      (is (= 5 (nilclaw/gateway:gateway-method-event-seq (second replay)))))))
+
+(test stream-replay-no-missed-events
+  "If all events were acked, replay returns empty."
+  (let ((stream (nilclaw/gateway:make-default-event-stream)))
+    (dotimes (i 3)
+      (nilclaw/gateway:stream-emit stream (format nil "e~A" i) '()))
+    (nilclaw/gateway:stream-ack stream 3)
+    (nilclaw/gateway:stream-disconnect stream)
+    (nilclaw/gateway:stream-reconnect stream)
+    (is (= 0 (length (nilclaw/gateway:stream-replay-after-reconnect stream))))))
+
+(test stream-replay-all-missed
+  "If no events were acked, replay returns all events."
+  (let ((stream (nilclaw/gateway:make-default-event-stream)))
+    (dotimes (i 4)
+      (nilclaw/gateway:stream-emit stream (format nil "e~A" i) '()))
+    ;; No ack (last-ack-seq stays 0)
+    (nilclaw/gateway:stream-disconnect stream)
+    (nilclaw/gateway:stream-reconnect stream)
+    (is (= 4 (length (nilclaw/gateway:stream-replay-after-reconnect stream))))))
+
+(test stream-events-during-disconnect-replayed
+  "Events emitted while disconnected should be included in replay."
+  (let ((stream (nilclaw/gateway:make-default-event-stream)))
+    ;; Emit 2 events while connected, ack both
+    (nilclaw/gateway:stream-emit stream "before-1" '())
+    (nilclaw/gateway:stream-emit stream "before-2" '())
+    (nilclaw/gateway:stream-ack stream 2)
+    ;; Disconnect
+    (nilclaw/gateway:stream-disconnect stream)
+    ;; Emit events while disconnected (server-side processing continues)
+    (nilclaw/gateway:stream-emit stream "during-disconnect-1" '())
+    (nilclaw/gateway:stream-emit stream "during-disconnect-2" '())
+    ;; Reconnect
+    (nilclaw/gateway:stream-reconnect stream)
+    ;; Replay should include the events emitted during disconnect
+    (let ((replay (nilclaw/gateway:stream-replay-after-reconnect stream)))
+      (is (= 2 (length replay)))
+      (is (string= "during-disconnect-1"
+                    (nilclaw/gateway:gateway-method-event-method (first replay))))
+      (is (string= "during-disconnect-2"
+                    (nilclaw/gateway:gateway-method-event-method (second replay)))))))
+
+(test stream-dedupe-survives-reconnect
+  "Idempotency keys should persist across reconnect cycles."
+  (let ((stream (nilclaw/gateway:make-default-event-stream)))
+    ;; Emit with key
+    (nilclaw/gateway:stream-emit-deduped stream "chat.send" '() "key-1")
+    ;; Disconnect and reconnect
+    (nilclaw/gateway:stream-disconnect stream)
+    (nilclaw/gateway:stream-reconnect stream)
+    ;; Same key should still be deduplicated
+    (multiple-value-bind (event _s)
+        (nilclaw/gateway:stream-emit-deduped stream "chat.send" '() "key-1")
+      (declare (ignorable _s))
+      (is (null event)))
+    ;; New key should work
+    (multiple-value-bind (event _s)
+        (nilclaw/gateway:stream-emit-deduped stream "chat.send" '() "key-2")
+      (declare (ignorable _s))
+      (is (not (null event))))))
