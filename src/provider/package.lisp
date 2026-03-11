@@ -44,4 +44,12 @@
            #:build-request-body
            #:parse-provider-content
            #:http-transport-with-backoff
-           #:http-transport-fn))
+           #:http-transport-fn
+           ;; Dexador backend
+           #:dexador-backend
+           #:enable-dexador-backend
+           #:disable-http-backend
+           #:http-backend-enabled-p
+           #:build-auth-header
+           #:build-request-headers
+           #:*current-provider-headers*))

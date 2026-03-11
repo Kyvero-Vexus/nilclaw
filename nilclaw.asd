@@ -48,7 +48,8 @@
       ((:file "package")
        (:file "types")
        (:file "http")
-       (:file "compatible")))
+       (:file "compatible")
+       (:file "dexador")))
      (:module "skills"
       :components
       ((:file "package")
