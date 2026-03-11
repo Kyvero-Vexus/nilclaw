@@ -31,11 +31,11 @@ jobs:
               (load quicklisp-init)))
           EOF
 
-      - name: Install FiveAM
+      - name: Install CL dependencies
         run: |
           sbcl --noinform --non-interactive \
             --load ~/quicklisp/setup.lisp \
-            --eval '(ql:quickload :fiveam)'
+            --eval '(ql:quickload (list :alexandria :cl-json :cl-ppcre :fiveam))'
 
       - name: Load system
         run: make load
