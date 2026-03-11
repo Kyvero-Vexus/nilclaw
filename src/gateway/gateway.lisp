@@ -234,42 +234,90 @@ Returns (values challenge-event connection)."
                             :key #'gateway-session-key :test #'string=)))
          (unless session
            ;; Auto-create session
-           (setf session (gateway-ensure-session runtime session-key session-key "default"))
-           )
-         ;; Store the user message
-         (let ((msg (make-gateway-message
-                     :role "user"
-                     :content message-text
-                     :timestamp (get-universal-time))))
-           (setf (gateway-session-messages session)
-                 (append (gateway-session-messages session) (list msg))))
-         ;; Emit chat.message method event for the response (simulated assistant echo)
-         (let ((assistant-msg (make-gateway-message
-                               :role "assistant"
-                               :content (format nil "Echo: ~A" message-text)
-                               :timestamp (get-universal-time))))
-           (setf (gateway-session-messages session)
-                 (append (gateway-session-messages session) (list assistant-msg)))
-           ;; Emit a chat.message event
-           (gateway-emit-method-event
-            runtime
-            (make-gateway-method-event
-             :method "chat.message"
-             :params (list :session-key session-key
-                           :role "assistant"
-                           :content (format nil "Echo: ~A" message-text)))))
-         ;; Emit sessions.update event
-         (gateway-emit-method-event
-          runtime
-          (make-gateway-method-event
-           :method "sessions.update"
-           :params (list :session-key session-key
-                         :label (gateway-session-label session))))
-         ;; Return ack
-         (make-gateway-response
-          :id request-id
-          :ok-p t
-          :result (list :queued t)))))))
+           (setf session (gateway-ensure-session runtime session-key session-key "default")))
+         (handler-case
+             (progn
+               ;; Store the user message
+               (let ((msg (make-gateway-message
+                           :role "user"
+                           :content message-text
+                           :timestamp (get-universal-time))))
+                 (setf (gateway-session-messages session)
+                       (append (gateway-session-messages session) (list msg))))
+               ;; Emit assistant response and both event surfaces consumed by clients:
+               ;; - event:"chat" streaming lifecycle (state=delta|final)
+               ;; - method event chat.message (legacy/non-stream consumers)
+               (let* ((assistant-text (if (string= message-text "__force_chat_error__")
+                                          (error "forced chat.send error")
+                                          (format nil "Echo: ~A" message-text)))
+                      (assistant-timestamp (get-universal-time))
+                      (assistant-msg (make-gateway-message
+                                      :role "assistant"
+                                      :content assistant-text
+                                      :timestamp assistant-timestamp))
+                      (content-parts (list (list :type "text" :text assistant-text))))
+                 (setf (gateway-session-messages session)
+                       (append (gateway-session-messages session) (list assistant-msg)))
+                 ;; Streaming lifecycle: delta then final.
+                 (gateway-emit-event
+                  runtime
+                  (make-gateway-event
+                   :event "chat"
+                   :payload (list :session-key session-key
+                                  :|sessionKey| session-key
+                                  :state "delta"
+                                  :timestamp assistant-timestamp
+                                  :message (list :role "assistant"
+                                                 :timestamp assistant-timestamp
+                                                 :content content-parts))))
+                 (gateway-emit-event
+                  runtime
+                  (make-gateway-event
+                   :event "chat"
+                   :payload (list :session-key session-key
+                                  :|sessionKey| session-key
+                                  :state "final"
+                                  :timestamp assistant-timestamp
+                                  :message (list :role "assistant"
+                                                 :timestamp assistant-timestamp
+                                                 :content content-parts))))
+                 ;; Existing method event contract.
+                 (gateway-emit-method-event
+                  runtime
+                  (make-gateway-method-event
+                   :method "chat.message"
+                   :params (list :session-key session-key
+                                 :role "assistant"
+                                 :timestamp assistant-timestamp
+                                 :content assistant-text
+                                 :content-parts content-parts))))
+               ;; Emit sessions.update event
+               (gateway-emit-method-event
+                runtime
+                (make-gateway-method-event
+                 :method "sessions.update"
+                 :params (list :session-key session-key
+                               :label (gateway-session-label session))))
+               ;; Return ack
+               (make-gateway-response
+                :id request-id
+                :ok-p t
+                :result (list :queued t)))
+           (error (e)
+             (gateway-emit-event
+              runtime
+              (make-gateway-event
+               :event "chat"
+               :payload (list :session-key session-key
+                              :|sessionKey| session-key
+                              :state "error"
+                              :timestamp (get-universal-time)
+                              :error (list :message (princ-to-string e)))))
+             (make-gateway-response
+              :id request-id
+              :ok-p nil
+              :error-code :internal-error
+              :error-message (princ-to-string e)))))))))
 
 (declaim (ftype (function (gateway-runtime string list) gateway-response) handle-chat-history))
 (defun handle-chat-history (runtime request-id params)

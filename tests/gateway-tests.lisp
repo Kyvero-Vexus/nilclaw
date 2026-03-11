@@ -1,6 +1,21 @@
 (in-package #:nilclaw/tests)
 (in-suite gateway-suite)
 
+(defun method-events-in-emission-order (runtime)
+  "Return method events from RUNTIME event log in emission order."
+  (declare (type nilclaw/gateway:gateway-runtime runtime))
+  (loop for raw in (reverse (nilclaw/gateway:gateway-runtime-event-log runtime))
+        when (and (consp raw) (eq (car raw) :method-event))
+          collect (cdr raw)))
+
+(defun chat-events-in-emission-order (runtime)
+  "Return `event: chat` gateway events from RUNTIME in emission order."
+  (declare (type nilclaw/gateway:gateway-runtime runtime))
+  (loop for raw in (reverse (nilclaw/gateway:gateway-runtime-event-log runtime))
+        when (and (typep raw 'nilclaw/gateway:gateway-event)
+                  (string= "chat" (nilclaw/gateway:gateway-event-event raw)))
+          collect raw))
+
 ;;; --- Backward-compatible tests (existing) ---
 
 (test gateway-runtime-ready
@@ -205,7 +220,7 @@
       (is (string= "assistant" (nilclaw/gateway:gateway-message-role (second msgs)))))))
 
 (test gateway-chat-send-emits-events
-  "chat.send should emit chat.message and sessions.update events."
+  "chat.send should emit chat.message and sessions.update method events."
   (let* ((runtime (nilclaw/gateway:make-gateway-runtime)))
     (nilclaw/gateway:gateway-ensure-session runtime "chat-sess" "Chat Session" "agent-1")
     (nilclaw/gateway:gateway-handle-request
@@ -213,15 +228,75 @@
       :id "c3" :method "chat.send"
       :params (list :session-key "chat-sess" :message "Hi"))
      runtime)
-    ;; Check event log (reversed because push)
-    (let* ((events (reverse (nilclaw/gateway:gateway-runtime-event-log runtime)))
-           (first-event (cdr (first events)))
-           (second-event (cdr (second events))))
-      (is (= 2 (length events)))
+    (let* ((method-events (method-events-in-emission-order runtime))
+           (first-event (first method-events))
+           (second-event (second method-events)))
+      (is (= 2 (length method-events)))
       (is (string= "chat.message"
                     (nilclaw/gateway:gateway-method-event-method first-event)))
+      (let* ((chat-params (nilclaw/gateway:gateway-method-event-params first-event))
+             (parts (getf chat-params :content-parts)))
+        (is (string= "assistant" (getf chat-params :role)))
+        (is (integerp (getf chat-params :timestamp)))
+        (is (listp parts))
+        (is (string= "text" (getf (first parts) :type)))
+        (is (stringp (getf (first parts) :text))))
       (is (string= "sessions.update"
                     (nilclaw/gateway:gateway-method-event-method second-event))))))
+
+(test gateway-chat-send-emits-chat-streaming-events
+  "chat.send should emit event=chat frames with state=delta and state=final."
+  (let* ((runtime (nilclaw/gateway:make-gateway-runtime)))
+    (nilclaw/gateway:gateway-ensure-session runtime "chat-sess" "Chat Session" "agent-1")
+    (nilclaw/gateway:gateway-handle-request
+     (nilclaw/gateway:make-gateway-request
+      :id "c3-stream" :method "chat.send"
+      :params (list :session-key "chat-sess" :message "Hi"))
+     runtime)
+    (let* ((chat-events (chat-events-in-emission-order runtime))
+           (delta (first chat-events))
+           (final (second chat-events))
+           (delta-payload (nilclaw/gateway:gateway-event-payload delta))
+           (final-payload (nilclaw/gateway:gateway-event-payload final))
+           (delta-message (getf delta-payload :message))
+           (final-message (getf final-payload :message)))
+      (is (= 2 (length chat-events)))
+      (is (string= "delta" (getf delta-payload :state)))
+      (is (string= "final" (getf final-payload :state)))
+      (is (integerp (getf delta-payload :timestamp)))
+      (is (integerp (getf final-payload :timestamp)))
+      (is (integerp (getf delta-message :timestamp)))
+      (is (integerp (getf final-message :timestamp)))
+      (is (string= "chat-sess" (or (getf delta-payload :session-key)
+                                    (getf delta-payload :|sessionKey|))))
+      (is (string= "chat-sess" (or (getf final-payload :session-key)
+                                    (getf final-payload :|sessionKey|))))
+      (is (listp (getf delta-message :content)))
+      (is (string= "text" (getf (first (getf delta-message :content)) :type)))
+      (is (stringp (getf (first (getf final-message :content)) :text))))))
+
+(test gateway-chat-send-emits-chat-error-event
+  "chat.send internal failures should emit event=chat with state=error envelope."
+  (let* ((runtime (nilclaw/gateway:make-gateway-runtime))
+         (resp nil))
+    (nilclaw/gateway:gateway-ensure-session runtime "chat-sess" "Chat Session" "agent-1")
+    (setf resp
+          (nilclaw/gateway:gateway-handle-request
+           (nilclaw/gateway:make-gateway-request
+            :id "c3-stream-error" :method "chat.send"
+            :params (list :session-key "chat-sess" :message "__force_chat_error__"))
+           runtime))
+    (let* ((chat-events (chat-events-in-emission-order runtime))
+           (err (first chat-events))
+           (payload (nilclaw/gateway:gateway-event-payload err)))
+      (is (not (nilclaw/gateway:gateway-response-ok-p resp)))
+      (is (eq :internal-error (nilclaw/gateway:gateway-response-error-code resp)))
+      (is (= 1 (length chat-events)))
+      (is (string= "error" (getf payload :state)))
+      (is (integerp (getf payload :timestamp)))
+      (is (string= "chat-sess" (or (getf payload :session-key)
+                                    (getf payload :|sessionKey|))))
+      (is (stringp (getf (getf payload :error) :message))))))
 
 (test gateway-chat-send-auto-creates-session
   "chat.send to unknown session should auto-create it."
@@ -374,7 +449,7 @@
 ;;; --- Event ordering ---
 
 (test gateway-event-ordering-on-chat
-  "Events emitted by chat.send should be in deterministic order: chat.message then sessions.update."
+  "Method events emitted by chat.send should be in deterministic order: chat.message then sessions.update."
   (let* ((runtime (nilclaw/gateway:make-gateway-runtime)))
     (nilclaw/gateway:gateway-ensure-session runtime "ord-sess" "Order Test" "agent-1")
     (nilclaw/gateway:gateway-handle-request
@@ -382,16 +457,15 @@
       :id "ord-1" :method "chat.send"
       :params (list :session-key "ord-sess" :message "Order test"))
      runtime)
-    ;; Events pushed in reverse order; reverse to get emission order
-    (let* ((events (reverse (nilclaw/gateway:gateway-runtime-event-log runtime))))
-      (is (>= (length events) 2))
+    (let* ((method-events (method-events-in-emission-order runtime)))
+      (is (= 2 (length method-events)))
       (is (string= "chat.message"
-                    (nilclaw/gateway:gateway-method-event-method (cdr (first events)))))
+                    (nilclaw/gateway:gateway-method-event-method (first method-events))))
       (is (string= "sessions.update"
-                    (nilclaw/gateway:gateway-method-event-method (cdr (second events))))))))
+                    (nilclaw/gateway:gateway-method-event-method (second method-events)))))))
 
 (test gateway-multiple-sends-preserve-event-order
-  "Multiple chat.send calls should accumulate events in order."
+  "Multiple chat.send calls should accumulate method events in order."
   (let* ((runtime (nilclaw/gateway:make-gateway-runtime)))
     (nilclaw/gateway:gateway-ensure-session runtime "multi-sess" "Multi" "agent-1")
     (dotimes (i 3)
@@ -401,17 +475,16 @@
         :params (list :session-key "multi-sess"
                       :message (format nil "Msg ~A" i)))
        runtime))
-    ;; 3 sends × 2 events each = 6
-    (is (= 6 (length (nilclaw/gateway:gateway-runtime-event-log runtime))))
-    ;; Check alternating pattern (reversed log)
-    (let ((events (reverse (nilclaw/gateway:gateway-runtime-event-log runtime))))
+    ;; 3 sends × 2 method-events each = 6
+    (let ((method-events (method-events-in-emission-order runtime)))
+      (is (= 6 (length method-events)))
       (loop for i from 0 below 6 by 2
             do (is (string= "chat.message"
                             (nilclaw/gateway:gateway-method-event-method
-                             (cdr (nth i events)))))
+                             (nth i method-events))))
                (is (string= "sessions.update"
                             (nilclaw/gateway:gateway-method-event-method
-                             (cdr (nth (1+ i) events)))))))))
+                             (nth (1+ i) method-events))))))))
 
 ;;; --- Malformed request edge cases ---
 
