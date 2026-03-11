@@ -55,10 +55,46 @@
     (is (eq :completed (nilclaw/cron:cron-task-status (first executed))))))
 
 (test e2e-gateway-control-plane
-  (let ((response (nilclaw/gateway:gateway-handle-request
-                   (nilclaw/gateway:make-gateway-request :id "abc" :method "ping" :params '()))))
-    (is (nilclaw/gateway:gateway-response-ok-p response))
-    (is (equal '(:pong t) (nilclaw/gateway:gateway-response-result response)))))
+  (let* ((runtime (nilclaw/gateway:make-gateway-runtime))
+         (session-key "e2e-session"))
+    ;; Exercise a real control-plane flow: connect + session mutation + history replay.
+    (nilclaw/gateway:gateway-ensure-session runtime session-key "E2E Session" "agent-e2e")
+    (let* ((connect (nilclaw/gateway:gateway-handle-request
+                     (nilclaw/gateway:make-gateway-request
+                      :id "gw-1"
+                      :method "connect"
+                      :params (list :min-protocol 3
+                                    :max-protocol 3
+                                    :client (list :id "e2e-client"
+                                                  :display-name "E2E Client")))
+                     runtime
+                     (nilclaw/gateway:make-gateway-connection :nonce "e2e-nonce")))
+           (chat-send (nilclaw/gateway:gateway-handle-request
+                       (nilclaw/gateway:make-gateway-request
+                        :id "gw-2"
+                        :method "chat.send"
+                        :params (list :session-key session-key
+                                      :message "hello from e2e"
+                                      :idempotency-key "e2e-idem-1"))
+                       runtime))
+           (history (nilclaw/gateway:gateway-handle-request
+                     (nilclaw/gateway:make-gateway-request
+                      :id "gw-3"
+                      :method "chat.history"
+                      :params (list :session-key session-key
+                                    :limit 10))
+                     runtime)))
+      (is (nilclaw/gateway:gateway-response-ok-p connect))
+      (is (= 3 (getf (nilclaw/gateway:gateway-response-result connect) :protocol)))
+      (is (nilclaw/gateway:gateway-response-ok-p chat-send))
+      (is (getf (nilclaw/gateway:gateway-response-result chat-send) :queued))
+      (is (nilclaw/gateway:gateway-response-ok-p history))
+      (let* ((messages (getf (nilclaw/gateway:gateway-response-result history) :messages))
+             (first-message (first messages)))
+        (is (>= (length messages) 2))
+        (is (integerp (getf first-message :timestamp)))
+        (is (equal (getf first-message :content-parts)
+                   (getf first-message :|contentParts|)))))))
 
 (test e2e-identity-workspace
   (is (nilclaw/bootstrap:bootstrap-entrypoint-available-p)))
@@ -71,13 +107,19 @@
 (test e2e-provider-abstraction
   (let* ((runtime (nilclaw/provider:make-provider-runtime :max-retries 1))
          (request (nilclaw/provider:make-provider-request :model "openai/gpt-4o-mini" :messages '((:role "user" :content "hello"))))
+         (attempts 0)
          (result (nilclaw/provider:provider-complete
                   runtime
                   request
                   (lambda (req attempt)
-                    (declare (ignore req attempt))
-                    (values "hello back" nil)))))
+                    (declare (ignore req))
+                    (setf attempts attempt)
+                    (if (= attempt 1)
+                        (values nil :timeout)
+                      (values "hello back" nil))))))
     (is (nilclaw/provider:provider-result-success-p result))
+    (is (= 2 attempts))
+    (is (= 2 (nilclaw/provider:provider-result-attempts result)))
     (is (string= "hello back" (nilclaw/provider:provider-result-content result)))))
 
 (test e2e-skills-system

@@ -369,10 +369,12 @@ Returns (values challenge-event connection)."
                     (message-data
                       (mapcar (lambda (m)
                                 (let ((txt (gateway-message-content m)))
-                                  (list :role (gateway-message-role m)
-                                        :content txt
-                                        :content-parts (list (list :type "text" :text txt))
-                                        :timestamp (gateway-message-timestamp m))))
+                                  (let ((parts (list (list :type "text" :text txt))))
+                                    (list :role (gateway-message-role m)
+                                          :content txt
+                                          :content-parts parts
+                                          :|contentParts| parts
+                                          :timestamp (gateway-message-timestamp m)))))
                               limited)))
                (make-gateway-response
                 :id request-id

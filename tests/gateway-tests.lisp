@@ -77,6 +77,27 @@
       (is (= tick-ms tick-ms-camel))
       (is (> tick-ms 0)))))
 
+(test gateway-connect-method-authenticates-camelcase-params
+  "connect method should also accept camelCase protocol/client fields."
+  (let* ((runtime (nilclaw/gateway:make-gateway-runtime))
+         (conn (nilclaw/gateway:make-gateway-connection :nonce "test-nonce"))
+         (params (list :|minProtocol| 3 :|maxProtocol| 3
+                       :client (list :|id| "camel-client" :|displayName| "Camel")))
+         (resp (nilclaw/gateway:handle-connect runtime "req-1b" params conn)))
+    (is (nilclaw/gateway:gateway-response-ok-p resp))
+    (is (string= "req-1b" (nilclaw/gateway:gateway-response-id resp)))
+    (is (nilclaw/gateway:gateway-connection-authenticated conn))
+    (is (string= "camel-client" (nilclaw/gateway:gateway-connection-client-id conn)))
+    (is (string= "Camel" (nilclaw/gateway:gateway-connection-client-display-name conn)))
+    (let* ((result (nilclaw/gateway:gateway-response-result resp))
+           (policy (getf result :policy)))
+      (is (listp result))
+      (is (= 3 (getf result :protocol)))
+      (is (integerp (getf result :timestamp)))
+      (is (numberp (getf policy :tick-interval-ms)))
+      (is (= (getf policy :tick-interval-ms)
+             (getf policy :|tickIntervalMs|))))))
+
 (test gateway-connect-protocol-mismatch
   "connect with incompatible protocol version should fail."
   (let* ((runtime (nilclaw/gateway:make-gateway-runtime))
@@ -133,6 +154,7 @@
     (is (nilclaw/gateway:gateway-response-ok-p resp))
     (let ((result (nilclaw/gateway:gateway-response-result resp)))
       (is (integerp (getf result :timestamp)))
+      (is (listp result))
       (is (equal nil (getf result :sessions))))))
 
 (test gateway-sessions-list-with-data
@@ -150,6 +172,8 @@
              (first-session (first sessions)))
         (is (integerp (getf result :timestamp)))
         (is (= 2 (length sessions)))
+        (is (string= (getf first-session :session-key)
+                     (getf first-session :|sessionKey|)))
         (is (string= (getf first-session :key)
                      (or (getf first-session :session-key)
                          (getf first-session :|sessionKey|))))
@@ -185,6 +209,7 @@
     (is (nilclaw/gateway:gateway-response-ok-p resp))
     (let ((result (nilclaw/gateway:gateway-response-result resp)))
       (is (integerp (getf result :timestamp)))
+      (is (listp result))
       (is (equal nil (getf result :agents))))))
 
 (test gateway-agents-list-with-data
@@ -405,7 +430,8 @@
       (let* ((result (nilclaw/gateway:gateway-response-result resp))
              (messages (getf result :messages))
              (first-message (first messages))
-             (parts (getf first-message :content-parts)))
+             (parts (or (getf first-message :content-parts)
+                        (getf first-message :|contentParts|))))
         (is (string= "h-sess" (or (getf result :session-key)
                                    (getf result :|sessionKey|))))
         (is (integerp (getf result :timestamp)))
@@ -414,6 +440,7 @@
         ;; First message should be user/First
         (is (string= "user" (getf first-message :role)))
         (is (string= "First" (getf first-message :content)))
+        (is (integerp (getf first-message :timestamp)))
         (is (listp parts))
         (is (string= "text" (getf (first parts) :type)))
         (is (string= "First" (getf (first parts) :text)))))))
@@ -479,6 +506,7 @@
     (is (nilclaw/gateway:gateway-response-ok-p resp))
     (let ((result (nilclaw/gateway:gateway-response-result resp)))
       (is (integerp (getf result :timestamp)))
+      (is (listp result))
       (is (equal nil (getf result :models))))))
 
 (test gateway-models-list-with-data
@@ -500,7 +528,9 @@
         (is (string= "claude-3" (getf first-model :id)))
         (is (string= "Claude 3" (getf first-model :name)))
         (is (string= "anthropic" (getf first-model :provider)))
-        (is (integerp (getf first-model :timestamp)))))))
+        (is (integerp (getf first-model :timestamp)))
+        (is (<= (getf result :timestamp)
+                (getf first-model :timestamp)))))))
 
 ;;; --- Event ordering ---
 
