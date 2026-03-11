@@ -2,6 +2,7 @@
   (:use #:cl)
   (:export
    #:tool-call
+   #:make-tool-call
    #:tool-call-name
    #:tool-call-arguments-json
    #:tool-call-id
@@ -17,4 +18,34 @@
    #:format-native-tool-results
    #:repair-json
    #:build-tool-instructions
-   #:build-assistant-history-with-tool-calls))
+   #:build-assistant-history-with-tool-calls
+   ;; Tool execution runtime (L2)
+   #:tool-definition
+   #:make-tool-definition
+   #:tool-definition-name
+   #:tool-definition-description
+   #:tool-definition-parameters-schema
+   #:tool-definition-handler
+   #:tool-definition-risk-level
+   #:tool-execution-result
+   #:make-tool-execution-result
+   #:tool-execution-result-tool-call-id
+   #:tool-execution-result-name
+   #:tool-execution-result-output
+   #:tool-execution-result-success-p
+   #:tool-execution-result-error-code
+   #:tool-execution-result-duration-ms
+   #:tool-registry
+   #:make-tool-registry
+   #:make-default-tool-registry
+   #:tool-registry-tools
+   #:tool-registry-max-iterations
+   #:tool-registry-current-iteration
+   #:register-tool
+   #:lookup-tool
+   #:list-tools
+   #:tool-count
+   #:iteration-limit-reached-p
+   #:execute-tool-call
+   #:execute-tool-calls
+   #:results-to-plumbing))

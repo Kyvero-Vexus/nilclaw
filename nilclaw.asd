@@ -40,7 +40,8 @@
        (:file "json-repair")
        (:file "json-extract")
        (:file "format-results")
-       (:file "dispatcher")))
+       (:file "dispatcher")
+       (:file "executor")))
      (:module "provider"
       :components
       ((:file "package")
@@ -91,4 +92,5 @@
      (:file "gateway-tests")
      (:file "agent-root-tests")
      (:file "traceability-linkage-tests")
-     (:file "e2e-smoke-tests")))))
+     (:file "e2e-smoke-tests")
+     (:file "tool-executor-tests")))))
