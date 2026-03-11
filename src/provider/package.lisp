@@ -7,6 +7,7 @@
            #:provider-runtime-model
            #:provider-runtime-base-url
            #:provider-runtime-api-key
+           #:provider-runtime-max-retries
            #:make-provider-runtime
            #:make-default-provider-runtime
            #:provider-integration-ready-p

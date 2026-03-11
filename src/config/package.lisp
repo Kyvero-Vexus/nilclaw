@@ -3,6 +3,7 @@
   (:export
    ;; Config struct and constructors
    #:config
+   #:make-config
    #:make-default-config
    #:copy-config
    ;; Parsing
@@ -94,4 +95,10 @@
    ;; Model parsing
    #:parse-model-string
    ;; Duration parsing
-   #:parse-duration-string))
+   #:parse-duration-string
+   ;; Provider config helpers
+   #:get-provider-config
+   #:make-provider-runtime-from-config
+   #:list-configured-providers
+   #:provider-configured-p
+   #:resolve-default-provider))

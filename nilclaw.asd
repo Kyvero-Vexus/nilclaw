@@ -15,6 +15,7 @@
      ((:file "package")
       (:file "types")
       (:file "parse")
+      (:file "provider")
       (:file "validate")
       (:file "serialize")))
      (:module "security"
@@ -82,6 +83,7 @@
     :components
     ((:file "package")
      (:file "config-tests")
+     (:file "config-provider-tests")
      (:file "security-policy-tests")
      (:file "memory-contract-tests")
      (:file "agent-dispatcher-tests")
