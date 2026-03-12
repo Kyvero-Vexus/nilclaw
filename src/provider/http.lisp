@@ -151,13 +151,22 @@
            (type backoff-config backoff-config))
   (let* ((max-attempts (+ 1 (provider-runtime-max-retries runtime)))
          (base-url (provider-runtime-base-url runtime))
-         ;; Build full URL: append /chat/completions if base-url doesn't already end with it
+         ;; Build full URL: don't modify if already a complete endpoint URL
+         ;; OpenAI-style: ends with /chat/completions
+         ;; Anthropic-style: ends with /messages
          (url (if base-url
-                  (if (and (>= (length base-url) 17)
-                           (string= "/chat/completions" 
-                                    (subseq base-url (- (length base-url) 17))))
-                      base-url
-                      (concatenate 'string base-url "/chat/completions"))
+                  (let ((len (length base-url)))
+                    (cond
+                      ;; Already ends with /chat/completions (OpenAI-style) - use as-is
+                      ((and (>= len 17)
+                            (string= "/chat/completions" (subseq base-url (- len 17))))
+                       base-url)
+                      ;; Already ends with /messages (Anthropic-style) - use as-is
+                      ((and (>= len 9)
+                            (string= "/messages" (subseq base-url (- len 9))))
+                       base-url)
+                      ;; Otherwise append /chat/completions for OpenAI compatibility
+                      (t (concatenate 'string base-url "/chat/completions"))))
                   "https://api.openai.com/v1/chat/completions"))
          (body (build-request-body request runtime)))
     (labels ((attempt (n)
