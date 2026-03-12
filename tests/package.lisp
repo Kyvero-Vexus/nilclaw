@@ -63,6 +63,18 @@
   :description "E2E smoke suite mapped from tests/e2e-specs"
   :in nilclaw-suite)
 
+(def-suite tool-executor-suite
+  :description "Tool executor module tests"
+  :in nilclaw-suite)
+
+(def-suite channel-suite
+  :description "Channel module tests"
+  :in nilclaw-suite)
+
+(def-suite subagent-suite
+  :description "Subagent module tests"
+  :in nilclaw-suite)
+
 (defun run-nilclaw-tests ()
   "Run all NilClaw tests and return results."
   (run! 'nilclaw-suite))

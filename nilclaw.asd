@@ -74,6 +74,12 @@
       ((:file "package")
        (:file "types")
        (:file "agent")))
+     (:module "channel"
+      :components
+      ((:file "package")
+       (:file "types")
+       (:file "permissions")
+       (:file "channels")))
      (:module "subagent"
       :components
       ((:file "package")
@@ -103,4 +109,5 @@
      (:file "traceability-linkage-tests")
      (:file "e2e-smoke-tests")
      (:file "tool-executor-tests")
+     (:file "channel-tests")
      (:file "subagent-tests")))))
