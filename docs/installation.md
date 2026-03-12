@@ -1,116 +1,161 @@
 # Installation
 
-This guide covers the main installation paths for macOS, Linux, and Windows.
+This guide covers the main installation paths for Linux, macOS, and Windows.
 
 ## Page Guide
 
 **Who this page is for**
 
-- First-time users installing NullClaw on a local machine
-- Operators choosing between package install and source build
+- First-time users installing NilClaw on a local machine
+- Operators setting up development or production environments
 - Contributors validating the baseline runtime before deeper setup
 
 **Read this next**
 
-- Open [Configuration](./configuration.md) after the binary is installed and on your `PATH`
-- Open [Usage and Operations](./usage.md) when you are ready to run first commands and service mode
-- Open [README](./README.md) if you want the broader English docs map before going deeper
-
-**If you came from ...**
-
-- [README](./README.md): this page is the concrete first-run path after choosing the installation track
-- [Commands](./commands.md): come here first if the CLI is missing or `nullclaw --help` does not work yet
-- [Development](./development.md): return here if a contributor workflow also needs a clean local binary setup
+- Open [Configuration](./configuration.md) after the system is loaded
+- Open [Usage and Operations](./usage.md) when you are ready to run first commands
+- Open [README](./README.md) if you want the broader docs map before going deeper
 
 ## Prerequisites
 
-- If building from source, use **Zig 0.15.2**.
-- Git (required for source install).
+- **SBCL** (Steel Bank Common Lisp) 2.2.0 or newer
+- **Quicklisp** package manager
+- Git (required for source install)
+- Make (for build automation)
 
-Check Zig version:
-
-```bash
-zig version
-```
-
-The output must be `0.15.2`.
-
-## Option 1: Homebrew (recommended for macOS/Linux)
+Check SBCL version:
 
 ```bash
-brew install nullclaw
-nullclaw --help
+sbcl --version
 ```
 
-If the command works, installation is complete.
-
-## Option 2: Build from Source (cross-platform)
+## Option 1: Install from Source (recommended)
 
 ```bash
-git clone https://github.com/nullclaw/nullclaw.git
-cd nullclaw
-zig build -Doptimize=ReleaseSmall
-zig build test --summary all
+# Clone the repository
+git clone https://github.com/Kyvero-Vexus/nilclaw.git
+cd nilclaw
+
+# Install dependencies via Quicklisp
+sbcl --eval '(ql:quickload (list :alexandria :cl-json :cl-ppcre :fiveam))' --quit
+
+# Load the system
+make load
+
+# Run tests
+make test
+
+# Verify traceability
+make traceability
 ```
 
-Build output:
+## Option 2: Quicklisp Installation (when available)
 
-- `zig-out/bin/nullclaw`
+```lisp
+;; In SBCL REPL
+(ql:quickload :nilclaw)
+```
 
-## Add Binary to PATH
+## Install SBCL and Quicklisp
 
-### macOS/Linux (zsh/bash)
+### Linux (Debian/Ubuntu)
 
 ```bash
-zig build -Doptimize=ReleaseSmall -p "$HOME/.local"
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
-# bash users: use ~/.bashrc
-source ~/.zshrc
+sudo apt-get update
+sudo apt-get install sbcl curl
+
+# Install Quicklisp
+curl -O https://beta.quicklisp.org/quicklisp.lisp
+sbcl --load quicklisp.lisp
 ```
 
-### Windows (PowerShell)
+Then in SBCL:
+```lisp
+(quicklisp-quickstart:install)
+(ql:add-to-init-file)
+```
+
+### Linux (RedHat/CentOS/Fedora)
+
+```bash
+sudo dnf install sbcl curl  # Fedora
+# or
+sudo yum install sbcl curl  # CentOS/RHEL
+
+# Install Quicklisp (same as above)
+curl -O https://beta.quicklisp.org/quicklisp.lisp
+sbcl --load quicklisp.lisp
+```
+
+### macOS
+
+```bash
+brew install sbcl curl
+
+# Install Quicklisp (same as above)
+curl -O https://beta.quicklisp.org/quicklisp.lisp
+sbcl --load quicklisp.lisp
+```
+
+### Windows
+
+1. Download SBCL from http://www.sbcl.org/platform-table.html
+2. Install and add to PATH
+3. Install Quicklisp using PowerShell:
 
 ```powershell
-zig build -Doptimize=ReleaseSmall -p "$HOME\.local"
+# Download Quicklisp
+Invoke-WebRequest -Uri https://beta.quicklisp.org/quicklisp.lisp -OutFile quicklisp.lisp
 
-$bin = "$HOME\.local\bin"
-$user_path = [Environment]::GetEnvironmentVariable("Path", "User")
-if (-not ($user_path -split ";" | Where-Object { $_ -eq $bin })) {
-  [Environment]::SetEnvironmentVariable("Path", "$user_path;$bin", "User")
-}
-$env:Path = "$env:Path;$bin"
+# Load in SBCL
+sbcl --load quicklisp.lisp
+```
+
+Then in SBCL:
+```lisp
+(quicklisp-quickstart:install)
+(ql:add-to-init-file)
 ```
 
 ## Verify Installation
 
 ```bash
-nullclaw --help
-nullclaw --version
-nullclaw status
+# Check that NilClaw loads successfully
+sbcl --eval '(ql:quickload :nilclaw)' --quit
+
+# Run the full test suite (should show 838/838 passing)
+make test
+
+# Verify traceability metrics
+make traceability
 ```
 
-If `status` returns component state successfully, runtime basics are ready.
-
-## Upgrade and Uninstall
-
-### Homebrew
-
-```bash
-brew update
-brew upgrade nullclaw
-brew uninstall nullclaw
+Expected output:
+```
+L0=28 L1=30 L2=24
+Did 838 checks.
+    Pass: 838 (100%)
+    Skip: 0 ( 0%)
+    Fail: 0 ( 0%)
 ```
 
-### Source install
+## Configuration Setup
 
-- Upgrade: `git pull`, then rebuild with `zig build -Doptimize=ReleaseSmall`.
-- Uninstall: delete the installed `nullclaw` binary and remove the PATH entry.
+Initialize default configuration:
+
+```lisp
+;; In SBCL REPL
+(ql:quickload :nilclaw)
+(nilclaw/config:initialize-default-config)
+```
+
+This creates `~/.nilclaw/config.json` with default settings.
 
 ## Next Steps
 
-- Run `nullclaw onboard --interactive`, then continue with [Configuration](./configuration.md)
-- Use [Usage and Operations](./usage.md) for first-run commands, service mode, and troubleshooting
-- Keep [Commands](./commands.md) nearby if you want a task-based CLI reference after install
+- Configure your setup with [Configuration](./configuration.md)
+- Learn basic operations with [Usage and Operations](./usage.md)
+- Reference CLI commands with [Commands](./commands.md)
 
 ## Related Pages
 

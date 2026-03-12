@@ -1,6 +1,6 @@
 # Configuration
 
-NullClaw is compatible with OpenClaw config structure and uses `snake_case` keys.
+NilClaw is compatible with OpenClaw config structure and uses `snake_case` keys.
 
 ## Page Guide
 
@@ -8,7 +8,7 @@ NullClaw is compatible with OpenClaw config structure and uses `snake_case` keys
 
 - Users creating or editing the main `config.json`
 - Operators tuning channels, gateway behavior, and autonomy limits
-- Migrators mapping existing OpenClaw-style settings into NullClaw
+- Migrators mapping existing OpenClaw-style settings into NilClaw
 
 **Read this next**
 
@@ -24,13 +24,14 @@ NullClaw is compatible with OpenClaw config structure and uses `snake_case` keys
 
 ## Config File Path
 
-- macOS/Linux: `~/.nullclaw/config.json`
-- Windows: `%USERPROFILE%\\.nullclaw\\config.json`
+- macOS/Linux: `~/.nilclaw/config.json`
+- Windows: `%USERPROFILE%\.nilclaw\config.json`
 
 Recommended first step:
 
-```bash
-nullclaw onboard --interactive
+```lisp
+;; In SBCL REPL
+(nilclaw/config:initialize-default-config)
 ```
 
 This generates your initial config file.

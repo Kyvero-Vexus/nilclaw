@@ -1,0 +1,31 @@
+title: NilClaw Documentation
+description: Statically typed Common Lisp agent harness
+theme: just-the-docs
+url: "https://kyvero-vexus.github.io"
+baseurl: "/nilclaw"
+
+# Enable search
+search_enabled: true
+
+# Navigation
+nav_enabled: true
+
+# Aux links
+aux_links:
+  "GitHub Repository":
+    - "https://github.com/Kyvero-Vexus/nilclaw"
+
+# Footer
+footer_content: 'Copyright &copy; 2026 Kyvero Vexus Corporation. Distributed under AGPL-3.0-or-later.'
+
+# Color scheme
+color_scheme: nilclaw
+
+# Plugins
+plugins:
+  - jekyll-seo-tag
+  - jekyll-github-metadata
+
+# Exclude
+exclude:
+  - README.md

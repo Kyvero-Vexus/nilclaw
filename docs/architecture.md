@@ -1,6 +1,6 @@
 # Architecture
 
-NullClaw uses a vtable-driven pluggable architecture. Most capabilities are extended by implementing interfaces and registering factories.
+NilClaw uses a modular, type-safe architecture built on Common Lisp's strengths.
 
 ## Page Guide
 

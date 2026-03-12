@@ -1,12 +1,12 @@
 # Security
 
-NullClaw follows secure-by-default behavior: local bind by default, pairing auth, sandbox isolation, and least privilege.
+NilClaw follows secure-by-default behavior: local bind by default, pairing auth, sandbox isolation, and least privilege.
 
 ## Page Guide
 
 **Who this page is for**
 
-- Operators hardening a local or tunneled NullClaw deployment
+- Operators hardening a local or tunneled NilClaw deployment
 - Reviewers checking whether config or runtime changes widen trust boundaries
 - Contributors touching gateway, tool, sandbox, or exposure-sensitive paths
 
