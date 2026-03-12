@@ -134,6 +134,8 @@
   (cost (list :enabled nil :daily-limit-usd 10.0d0 :monthly-limit-usd 100.0d0) :type list)
   (composio (list :enabled nil :api-key nil :entity-id "default") :type list)
   (tunnel (list :provider "none") :type list)
+  ;; Auth profiles for OAuth providers (maps profile-id -> plist with :provider, :mode, :access-token)
+  (auth-profiles nil :type list)
   (audio-media (list :enabled t :provider "groq" :model "whisper-large-v3"
                      :base-url nil :language nil)
                :type list))

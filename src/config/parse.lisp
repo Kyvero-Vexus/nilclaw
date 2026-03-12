@@ -340,6 +340,18 @@
                                       :base-url (json-getf pdata :base--url)
                                       :native-tools (let ((v (json-getf pdata :native--tools :unset)))
                                                       (if (eq v :unset) t v)))))))))
+    ;; Auth profiles (for OAuth providers)
+    (let ((auth-data (json-getf data :auth)))
+      (when auth-data
+        (let ((profiles-data (json-getf auth-data :profiles)))
+          (when profiles-data
+            (setf (config-auth-profiles cfg)
+                  (loop for (profile-id . pdata) in profiles-data
+                        for profile-key = (let ((s (symbol-name profile-id)))
+                                            (substitute #\- #\_ (string-downcase s)))
+                        collect (list :profile-id profile-key
+                                      :provider (json-getf pdata :provider)
+                                      :mode (json-getf pdata :mode))))))))
     ;; MCP servers
     (let ((mcp (json-getf data :mcp--servers)))
       (when mcp

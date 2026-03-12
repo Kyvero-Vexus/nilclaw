@@ -101,6 +101,16 @@
                 (setf (config-mcp-servers cfg) val))
                (:model-routes
                 (setf (config-model-routes cfg) val))
+               ;; Auth profiles for OAuth
+               (:auth
+                (let ((profiles-plist (getf val :profiles)))
+                  (when profiles-plist
+                    (setf (config-auth-profiles cfg)
+                          (loop for (profile-id profile-val) on profiles-plist by #'cddr
+                                when (and profile-id (keywordp profile-id) profile-val)
+                                collect (list :profile-id (string-downcase (symbol-name profile-id))
+                                              :provider (getf profile-val :provider)
+                                              :mode (getf profile-val :mode)))))))
                ;; Nested :MODELS (:PROVIDERS ...) structure from migrated configs
                (:models
                 (let ((providers-plist (getf val :providers)))

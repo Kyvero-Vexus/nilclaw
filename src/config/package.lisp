@@ -70,6 +70,8 @@
    #:config-http-request
    #:config-channels
    #:config-providers
+   #:config-auth-profiles
+   #:get-oauth-access-token
    #:config-agents-list
    #:config-bindings
    #:config-mcp-servers
