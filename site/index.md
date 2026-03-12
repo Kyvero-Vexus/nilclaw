@@ -59,4 +59,4 @@ AGPL-3.0-or-later. See [LICENSE](https://github.com/Kyvero-Vexus/nilclaw/blob/ma
 
 ## Credits
 
-Developed by [Kyvero Vexus Corporation](https://github.com/Kyvero-Vexus).
+Developed by [Kyvero Vexus](https://github.com/Kyvero-Vexus).

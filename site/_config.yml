@@ -16,7 +16,7 @@ aux_links:
     - "https://github.com/Kyvero-Vexus/nilclaw"
 
 # Footer
-footer_content: 'Copyright &copy; 2026 Kyvero Vexus Corporation. Distributed under AGPL-3.0-or-later.'
+footer_content: 'Copyright &copy; 2026 Kyvero Vexus. Distributed under AGPL-3.0-or-later.'
 
 # Color scheme
 color_scheme: dark

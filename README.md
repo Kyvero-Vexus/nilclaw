@@ -165,6 +165,6 @@ This is libre software. See [LICENSE](LICENSE) for details.
 
 ## Credits
 
-**NilClaw** is developed by [Kyvero Vexus Corporation](https://github.com/Kyvero-Vexus).
+**NilClaw** is developed by [Kyvero Vexus](https://github.com/Kyvero-Vexus).
 
 Inspired by the agent harness problem space, implemented as a clean-room Common Lisp solution with strict static typing.
