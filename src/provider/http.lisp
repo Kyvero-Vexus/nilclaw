@@ -100,8 +100,29 @@
   "Build JSON request body for provider API call."
   (declare (type provider-request request)
            (type provider-runtime runtime))
-  (let ((payload `(("model" . ,(provider-runtime-model runtime))
-                   ("messages" . ,(provider-request-messages request)))))
+  ;; Use request model if set, otherwise fall back to runtime default
+  (let* ((model (or (let ((req-model (provider-request-model request)))
+                      (and req-model (> (length req-model) 0) req-model))
+                    (provider-runtime-model runtime)))
+         ;; Ensure messages is encoded as a JSON array
+         ;; Input can be: list of plists, list of alists, or single alist/plist
+         (raw-messages (provider-request-messages request))
+         (messages (if (and (listp raw-messages)
+                            (or (listp (car raw-messages))
+                                (and (consp (car raw-messages))
+                                     (not (member (caar raw-messages) '(:role "role") :test #'equal)))))
+                       ;; Already a list of messages or single cons cell message
+                       (if (and (consp raw-messages)
+                                (or (stringp (caar raw-messages))
+                                    (keywordp (caar raw-messages))))
+                           ;; Single message as alist/plist - wrap in list
+                           (list raw-messages)
+                           ;; Already a list of messages
+                           raw-messages)
+                       ;; Fallback: wrap in list
+                       (list raw-messages)))
+         (payload `(("model" . ,model)
+                    ("messages" . ,messages))))
     (with-output-to-string (s)
       (cl-json:encode-json payload s))))
 

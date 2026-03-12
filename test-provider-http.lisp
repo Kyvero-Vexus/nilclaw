@@ -1,57 +1,60 @@
-;;;; Test provider HTTP layer with actual API calls
-;;;; Requires valid API keys in ~/.nilclaw/init.lisp
-
-(in-package #:cl-user)
+;;;; Test nilclaw provider HTTP
 
 (require :asdf)
 (push (truename ".") asdf:*central-registry*)
-
-;; Load quicklisp for dependencies
-(let ((quicklisp-init (merge-pathnames "quicklisp/setup.lisp" (user-homedir-pathname))))
-  (when (probe-file quicklisp-init)
-    (load quicklisp-init)))
-
-(ql:quickload "alexandria" :silent t)
+(require :dexador)
 (asdf:load-system "nilclaw")
 
-(format t "~&[test] Testing provider HTTP layer...~%")
+(format t "~%=== Enable Dexador Backend ===~%")
+(handler-case
+    (progn
+      (nilclaw/provider:enable-dexador-backend)
+      (format t "Backend enabled: ~A~%" (nilclaw/provider:http-backend-enabled-p)))
+  (error (e)
+    (format t "ERROR: ~A~%" e)))
 
-;; Enable HTTP backend
-(nilclaw/provider:enable-dexador-backend)
-(format t "[test] HTTP backend enabled~%")
+(format t "~%=== Test HTTP Backend Request ===~%")
+(let* ((url "https://openrouter.ai/api/v1/chat/completions")
+       (api-key "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")
+       (body "{\"model\":\"openai/gpt-4o-mini\",\"messages\":[{\"role\":\"user\",\"content\":\"Say hello\"}]}"))
+  ;; Set headers
+  (setf nilclaw/provider:*current-provider-headers*
+        `(("Authorization" . ,(format nil "Bearer ~A" api-key))
+          ("Content-Type" . "application/json")))
+  (format t "Headers set: ~S~%" nilclaw/provider:*current-provider-headers*)
+  (multiple-value-bind (content status headers)
+      (nilclaw/provider:http-backend-request url :post body)
+    (format t "HTTP backend request result:~%")
+    (format t "  Status: ~A~%" status)
+    (format t "  Content: ~A chars~%" (if content (length content) "NIL"))
+    (when content
+      (format t "  Preview: ~A...~%" (subseq content 0 (min 200 (length content)))))))
 
-;; Load config
-(defvar *config* (nilclaw/config:load-config nil))
-(format t "[test] Config loaded~%")
+(format t "~%=== Test Full Provider Flow ===~%")
+(multiple-value-bind (cfg path) (nilclaw/config:load-config)
+  (declare (ignore path))
+  (multiple-value-bind (runtime found-p) 
+      (nilclaw/config:make-provider-runtime-from-config cfg "openrouter")
+    (format t "Runtime created: ~A, found: ~A~%" (not (null runtime)) found-p)
+    (when runtime
+      (format t "  base-url: ~A~%" (nilclaw/provider:provider-runtime-base-url runtime))
+      (format t "  api-key: ~A~%" (if (nilclaw/provider:provider-runtime-api-key runtime)
+                                     (format nil "~A***" (subseq (nilclaw/provider:provider-runtime-api-key runtime) 0 8))
+                                     "NIL"))
+      ;; Create request
+      (let ((request (nilclaw/provider:make-provider-request
+                      :model "openai/gpt-4o-mini"
+                      :messages '(("role" . "user") ("content" . "Say hello")))))
+        (format t "Request created~%")
+        ;; Test transport
+        (let* ((backoff (nilclaw/provider:make-backoff-config))
+               (http-result (nilclaw/provider:http-transport-with-backoff request runtime backoff)))
+          (format t "HTTP transport result:~%")
+          (format t "  Status: ~A~%" (nilclaw/provider:http-transport-result-status http-result))
+          (format t "  Error: ~A~%" (nilclaw/provider:http-transport-result-error-code http-result))
+          (format t "  Content: ~A~%" (if (nilclaw/provider:http-transport-result-content http-result)
+                                        (subseq (nilclaw/provider:http-transport-result-content http-result) 0 (min 100 (length (nilclaw/provider:http-transport-result-content http-result))))
+                                        "NIL")))))))
 
-;; Test 1: Create provider runtime for zai/glm-5
-(format t "~&[test] Test 1: Creating provider runtime for zai/glm-5...~%")
-(multiple-value-bind (runtime found-p)
-    (nilclaw/config:make-provider-runtime-from-config *config* "zai" :model "zai/glm-5")
-  (if runtime
-      (format t "[test] ✓ Provider runtime created: ~A~%" runtime)
-      (format t "[test] ✗ Failed to create provider runtime (found-p: ~A)~%" found-p)))
-
-;; Test 2: Create provider runtime for openrouter
-(format t "~&[test] Test 2: Creating provider runtime for openrouter...~%")
-(multiple-value-bind (runtime found-p)
-    (nilclaw/config:make-provider-runtime-from-config *config* "openrouter" :model "openrouter/auto")
-  (if runtime
-      (format t "[test] ✓ Provider runtime created: ~A~%" runtime)
-      (format t "[test] ✗ Failed to create provider runtime (found-p: ~A)~%" found-p)))
-
-;; Test 3: Make a simple chat request (using zai/glm-5 as default)
-(format t "~&[test] Test 3: Making chat request to zai/glm-5...~%")
-(let ((input "Say 'test ok' in exactly those words."))
-  (multiple-value-bind (runtime found-p)
-      (nilclaw/config:make-provider-runtime-from-config *config* "zai" :model "zai/glm-5")
-    (if runtime
-        (multiple-value-bind (response success-p)
-            (nilclaw/agent:agent-chat input runtime)
-          (if success-p
-              (format t "[test] ✓ Chat response: ~A~%" response)
-              (format t "[test] ✗ Chat failed: ~A~%" response)))
-        (format t "[test] ✗ No runtime available (found-p: ~A)~%" found-p))))
-
-(format t "~&[test] Provider HTTP layer tests complete.~%")
-(uiop:quit 0)
+(finish-output)
+(sb-ext:quit :unix-status 0)
