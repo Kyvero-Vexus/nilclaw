@@ -23,9 +23,10 @@
          (format t "  RUNTIME is NIL (check API key)~%"))
         (t
          (format t "  base-url: ~A~%" (nilclaw/provider:provider-runtime-base-url runtime))
-         (format t "  api-key: ~A~%" (if (nilclaw/provider:provider-runtime-api-key runtime)
-                                        (format nil "~A***" (subseq (nilclaw/provider:provider-runtime-api-key runtime) 0 8))
-                                        "NIL"))
+         (let ((api-key (nilclaw/provider:provider-runtime-api-key runtime)))
+           (format t "  api-key: ~A~%" (if (and api-key (> (length api-key) 8))
+                                          (format nil "~A***" (subseq api-key 0 8))
+                                          "NIL")))
          ;; Create simple request
          (let ((request (nilclaw/provider:make-provider-request
                          :model (cond
@@ -41,10 +42,10 @@
              (format t "  Result:~%")
              (format t "    Status: ~A~%" (nilclaw/provider:http-transport-result-status http-result))
              (format t "    Error: ~A~%" (or (nilclaw/provider:http-transport-result-error-code http-result) "none"))
-             (when (nilclaw/provider:http-transport-result-content http-result)
-               (format t "    Content: ~A...~%" 
-                       (subseq (nilclaw/provider:http-transport-result-content http-result) 
-                               0 (min 150 (length (nilclaw/provider:http-transport-result-content http-result)))))))))))))
+             (let ((content (nilclaw/provider:http-transport-result-content http-result)))
+               (when (and content (> (length content) 0))
+                 (format t "    Content: ~A...~%" 
+                         (subseq content 0 (min 150 (length content)))))))))))))
 
 (finish-output)
 (sb-ext:quit :unix-status 0)
