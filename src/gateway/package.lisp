@@ -113,4 +113,16 @@
            #:*config*
            ;; Chat commands
            #:run-chat
-           #:run-chat-repl))
+           #:run-chat-repl
+           ;; HTTP server
+           #:start-http-server
+           #:stop-http-server
+           #:http-server-running-p
+           #:*http-server*
+           #:*http-runtime*
+           #:*default-http-port*
+           #:handle-health
+           #:handle-status
+           #:handle-chat-post
+           #:plist-to-json
+           #:json-to-plist))

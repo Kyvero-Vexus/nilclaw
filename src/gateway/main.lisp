@@ -65,10 +65,13 @@
   ;; Install signal handlers
   (install-signal-handlers)
 
-  ;; Print status
-  (let ((gw (nilclaw/config:config-gateway *config*)))
+  ;; Start HTTP server
+  (let* ((gw (nilclaw/config:config-gateway *config*))
+         (port (or (getf gw :port) *default-http-port*))
+         (runtime (make-gateway-runtime :port port)))
+    (start-http-server :port port :runtime runtime)
     (format t "[nilclaw] Gateway listening on ~A:~A~%"
-            (getf gw :host) (getf gw :port)))
+            (getf gw :host) port))
   (format t "[nilclaw] NilClaw is ready.~%")
 
   ;; Main loop
@@ -78,6 +81,7 @@
             do (sleep 1))
     ;; Cleanup
     (format t "~&[nilclaw] Shutting down...~%")
+    (stop-http-server)
     (nilclaw/channel:stop-all-channels *channel-manager*)
     (format t "[nilclaw] Channels stopped~%")
     (format t "[nilclaw] NilClaw stopped.~%")
