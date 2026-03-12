@@ -1,0 +1,15 @@
+#!/bin/bash
+# nilclaw — launcher script for NilClaw daemon
+# Install: copy to ~/.local/bin/nilclaw or /usr/local/bin/nilclaw
+
+set -euo pipefail
+
+NILCLAW_ROOT="${NILCLAW_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
+NILCLAW_CONFIG="${NILCLAW_CONFIG:-}"
+
+exec sbcl --noinform --non-interactive \
+    --eval '(require :asdf)' \
+    --eval "(push (truename \"${NILCLAW_ROOT}\") asdf:*central-registry*)" \
+    --eval '(asdf:load-system "nilclaw")' \
+    --eval "(nilclaw/gateway:main)" \
+    -- "$@"

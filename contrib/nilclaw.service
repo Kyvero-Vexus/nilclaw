@@ -1,0 +1,33 @@
+[Unit]
+Description=NilClaw Agent Harness
+Documentation=https://kyvero-vexus.github.io/nilclaw/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/nilclaw start
+# Or if installed locally:
+# ExecStart=%h/.local/bin/nilclaw start
+
+Restart=on-failure
+RestartSec=5
+
+# Security hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=%h/.nilclaw %h/.cache/common-lisp
+PrivateTmp=yes
+
+# Environment
+Environment=NILCLAW_ROOT=/opt/nilclaw
+# Environment=NILCLAW_CONFIG=%h/.nilclaw/init.lisp
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=nilclaw
+
+[Install]
+WantedBy=default.target

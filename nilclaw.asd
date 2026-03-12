@@ -65,16 +65,6 @@
       ((:file "package")
        (:file "types")
        (:file "scheduler")))
-     (:module "gateway"
-      :components
-      ((:file "package")
-       (:file "types")
-       (:file "gateway")))
-     (:module "agent"
-      :components
-      ((:file "package")
-       (:file "types")
-       (:file "agent")))
      (:module "channel"
       :components
       ((:file "package")
@@ -82,6 +72,17 @@
        (:file "permissions")
        (:file "channels")
        (:file "auto-reply")))
+     (:module "gateway"
+      :components
+      ((:file "package")
+       (:file "types")
+       (:file "gateway")
+       (:file "main")))
+     (:module "agent"
+      :components
+      ((:file "package")
+       (:file "types")
+       (:file "agent")))
      (:module "subagent"
       :components
       ((:file "package")

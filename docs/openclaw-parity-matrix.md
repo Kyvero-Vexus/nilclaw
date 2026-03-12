@@ -1,7 +1,7 @@
 # OpenClaw ↔ Nilclaw Required-Path Parity Matrix (L0)
 
-Status: in progress (blocking L0 closure)
-Last updated: 2026-03-11 01:54 UTC
+Status: pass-backed (L0-L3 gates closed)
+Last updated: 2026-03-12 07:59 UTC
 
 ## Scope
 
@@ -28,7 +28,7 @@ Required production paths for cutover readiness:
 
 ## Objective evidence snapshot
 
-- `make test` → 340/340 passing (2026-03-11 00:52 UTC)
+- `make test` → 861/861 passing (2026-03-12 07:59 UTC)
 - `make traceability` → `L0=28 L1=30 L2=24`
 
 ## Remaining L0 blocker statement

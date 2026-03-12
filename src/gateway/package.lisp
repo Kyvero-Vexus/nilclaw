@@ -105,4 +105,9 @@
            #:stream-ack
            #:stream-disconnect
            #:stream-reconnect
-           #:stream-replay-after-reconnect))
+           #:stream-replay-after-reconnect
+           ;; Daemon
+           #:start-daemon
+           #:main
+           #:*running*
+           #:*config*))

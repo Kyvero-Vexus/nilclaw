@@ -13,6 +13,7 @@
    #:validate-config
    #:validation-error
    #:validation-error-kind
+   #:validation-error-message
    ;; Validation error kinds
    #:+no-default-model+
    #:+legacy-default-provider-field+
