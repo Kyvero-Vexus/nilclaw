@@ -101,9 +101,17 @@
   (declare (type provider-request request)
            (type provider-runtime runtime))
   ;; Use request model if set, otherwise fall back to runtime default
-  (let* ((model (or (let ((req-model (provider-request-model request)))
-                      (and req-model (> (length req-model) 0) req-model))
-                    (provider-runtime-model runtime)))
+  ;; Strip provider/ prefix from model name (e.g. "ollama/qwen2:0.5b" -> "qwen2:0.5b")
+  (let* ((raw-model (or (let ((req-model (provider-request-model request)))
+                          (and req-model (> (length req-model) 0) req-model))
+                        (provider-runtime-model runtime)))
+         (model (let ((slash (position #\/ raw-model)))
+                  (if (and slash (> slash 0)
+                           ;; Only strip if prefix matches provider name
+                           (string-equal (provider-runtime-name runtime)
+                                         (subseq raw-model 0 slash)))
+                      (subseq raw-model (1+ slash))
+                      raw-model)))
          ;; Ensure messages is encoded as a JSON array
          ;; Input can be: list of plists, list of alists, or single alist/plist
          (raw-messages (provider-request-messages request))
