@@ -1,11 +1,24 @@
 # Attribution
 
-NilClaw is a clean-room Common Lisp rewrite inspired by
-[NullClaw](https://github.com/nullclaw/nullclaw).
+NilClaw is a clean-room Common Lisp implementation inspired by
+[NullClaw](https://github.com/nickclaw/nullclaw), an agent harness
+written in Zig.
+
+## Acknowledgment
+
+NilClaw's behavioral specifications were originally derived from NullClaw's
+documentation and observable behavior. These specifications have since been
+adapted and extended for the Common Lisp implementation. No Zig source code
+has been copied into this repository.
+
+We gratefully acknowledge NullClaw and its contributors for establishing
+the agent harness patterns that informed NilClaw's design.
+
+## NullClaw License
 
 NullClaw is licensed under the MIT License:
 
-> Copyright (c) 2026 nullclaw contributors
+> Copyright (c) NullClaw contributors
 >
 > Permission is hereby granted, free of charge, to any person obtaining a copy
 > of this software and associated documentation files (the "Software"), to deal
@@ -21,8 +34,6 @@ NullClaw is licensed under the MIT License:
 > IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 > FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 
-Specifications in `specs/nullclaw-adapted/` are derived from NullClaw's
-documentation and source code. No Zig source code has been copied into
-this repository.
+## NilClaw License
 
-NilClaw itself is licensed under AGPL-3.0-or-later.
+NilClaw is licensed under AGPL-3.0-or-later. See [LICENSE](LICENSE).

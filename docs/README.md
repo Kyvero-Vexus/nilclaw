@@ -92,7 +92,7 @@ For detailed installation instructions, see [Installation](./installation.md).
 
 - Follow [Installation](./installation.md) for setup from Homebrew or source
 - Continue to [Configuration](./configuration.md) to wire providers, memory, and channels
-- Use [Usage and Operations](./usage.md) once you want to run NullClaw day to day
+- Use [Usage and Operations](./usage.md) once you want to run NilClaw day to day
 
 ## Related Pages
 

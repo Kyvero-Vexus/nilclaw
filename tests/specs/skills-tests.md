@@ -19,7 +19,7 @@ The skills module manages the lifecycle of extensible skill packages: parsing ma
 ## Manifest Parsing (JSON)
 
 ### Full JSON manifest
-- **Input**: `{"name": "code-review", "version": "1.2.0", "description": "Automated code review", "author": "nullclaw"}`
+- **Input**: `{"name": "code-review", "version": "1.2.0", "description": "Automated code review", "author": "nilclaw"}`
 - **Expected**: All fields populated correctly
 
 ### Minimal JSON (name only)

@@ -16,7 +16,7 @@
   (is (file-exists-p* "specs/product/adapted/security.md"))
   (is (file-exists-p* "specs/product/adapted/architecture.md"))
   (is (file-exists-p* "specs/product/adapted/usage.md"))
-  (is (file-exists-p* "specs/product/l1/architecture/nullclaw-baseline-architecture-index.md"))
+  (is (file-exists-p* "specs/product/l1/architecture/nilclaw-baseline-architecture-index.md"))
   (is (file-exists-p* "specs/product/l1/testing-policy/baseline-testing-policy.md"))
   (is (file-exists-p* "specs/product/l1/observability/baseline-observability.md")))
 

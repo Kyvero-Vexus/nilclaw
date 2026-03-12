@@ -2,7 +2,7 @@
 
 This page groups the NilClaw CLI by task so you can find the right command quickly without scanning the full help output.
 
-`nullclaw help` gives the top-level summary; this page stays aligned with it and expands into the detailed subcommands and notes.
+`nilclaw help` gives the top-level summary; this page stays aligned with it and expands into the detailed subcommands and notes.
 
 ## Page Guide
 
@@ -22,50 +22,50 @@ This page groups the NilClaw CLI by task so you can find the right command quick
 
 - [README](./README.md): this page is the fastest way to find a concrete command
 - [Installation](./installation.md): after setup, use this page to validate the install and learn daily commands
-- `nullclaw help`: use this page when the built-in help is correct but too terse
+- `nilclaw help`: use this page when the built-in help is correct but too terse
 
 ## Start with these
 
-- Show help: `nullclaw help`
-- Show version: `nullclaw version` or `nullclaw --version`
-- First-time setup: `nullclaw onboard --interactive`
-- Quick validation: `nullclaw agent -m "hello"`
-- Long-running mode: `nullclaw gateway`
+- Show help: `nilclaw help`
+- Show version: `nilclaw version` or `nilclaw --version`
+- First-time setup: `nilclaw onboard --interactive`
+- Quick validation: `nilclaw agent -m "hello"`
+- Long-running mode: `nilclaw gateway`
 
 ## Setup and interaction
 
 | Command | Purpose |
 |---|---|
-| `nullclaw help` | Show top-level help |
-| `nullclaw version` / `nullclaw --version` | Show CLI version |
-| `nullclaw onboard --interactive` | Run the interactive setup wizard |
-| `nullclaw onboard --api-key sk-... --provider openrouter` | Quick provider + API key setup |
-| `nullclaw onboard --api-key ... --provider ... --model ... --memory ...` | Set provider, model, and memory backend in one command |
-| `nullclaw onboard --channels-only` | Reconfigure channels and allowlists only |
-| `nullclaw agent -m "..."` | Run a single prompt |
-| `nullclaw agent` | Start interactive chat mode |
+| `nilclaw help` | Show top-level help |
+| `nilclaw version` / `nilclaw --version` | Show CLI version |
+| `nilclaw onboard --interactive` | Run the interactive setup wizard |
+| `nilclaw onboard --api-key sk-... --provider openrouter` | Quick provider + API key setup |
+| `nilclaw onboard --api-key ... --provider ... --model ... --memory ...` | Set provider, model, and memory backend in one command |
+| `nilclaw onboard --channels-only` | Reconfigure channels and allowlists only |
+| `nilclaw agent -m "..."` | Run a single prompt |
+| `nilclaw agent` | Start interactive chat mode |
 
 ## Runtime and operations
 
 | Command | Purpose |
 |---|---|
-| `nullclaw gateway` | Start the long-running runtime using configured host and port |
-| `nullclaw gateway --port 8080` | Override the gateway port from the CLI |
-| `nullclaw gateway --host 0.0.0.0 --port 8080` | Override host and port from the CLI |
-| `nullclaw service install` | Install the background service |
-| `nullclaw service start` | Start the background service |
-| `nullclaw service stop` | Stop the background service |
-| `nullclaw service restart` | Restart the background service |
-| `nullclaw service status` | Show service status |
-| `nullclaw service uninstall` | Remove the background service |
-| `nullclaw status` | Show overall system status |
-| `nullclaw doctor` | Run diagnostics |
-| `nullclaw update --check` | Check for updates without installing |
-| `nullclaw update --yes` | Install updates without prompting |
-| `nullclaw auth login openai-codex` | Authenticate `openai-codex` via OAuth device flow |
-| `nullclaw auth login openai-codex --import-codex` | Import auth from `~/.codex/auth.json` |
-| `nullclaw auth status openai-codex` | Show authentication state |
-| `nullclaw auth logout openai-codex` | Remove stored credentials |
+| `nilclaw gateway` | Start the long-running runtime using configured host and port |
+| `nilclaw gateway --port 8080` | Override the gateway port from the CLI |
+| `nilclaw gateway --host 0.0.0.0 --port 8080` | Override host and port from the CLI |
+| `nilclaw service install` | Install the background service |
+| `nilclaw service start` | Start the background service |
+| `nilclaw service stop` | Stop the background service |
+| `nilclaw service restart` | Restart the background service |
+| `nilclaw service status` | Show service status |
+| `nilclaw service uninstall` | Remove the background service |
+| `nilclaw status` | Show overall system status |
+| `nilclaw doctor` | Run diagnostics |
+| `nilclaw update --check` | Check for updates without installing |
+| `nilclaw update --yes` | Install updates without prompting |
+| `nilclaw auth login openai-codex` | Authenticate `openai-codex` via OAuth device flow |
+| `nilclaw auth login openai-codex --import-codex` | Import auth from `~/.codex/auth.json` |
+| `nilclaw auth status openai-codex` | Show authentication state |
+| `nilclaw auth logout openai-codex` | Remove stored credentials |
 
 Notes:
 
@@ -78,36 +78,36 @@ Notes:
 
 | Command | Purpose |
 |---|---|
-| `nullclaw channel list` | List known and configured channels |
-| `nullclaw channel start` | Start the default available channel |
-| `nullclaw channel start telegram` | Start a specific channel |
-| `nullclaw channel status` | Show channel health |
-| `nullclaw channel add <type>` | Print guidance for adding a channel to config |
-| `nullclaw channel remove <name>` | Print guidance for removing a channel from config |
+| `nilclaw channel list` | List known and configured channels |
+| `nilclaw channel start` | Start the default available channel |
+| `nilclaw channel start telegram` | Start a specific channel |
+| `nilclaw channel status` | Show channel health |
+| `nilclaw channel add <type>` | Print guidance for adding a channel to config |
+| `nilclaw channel remove <name>` | Print guidance for removing a channel from config |
 
 ### `cron`
 
 | Command | Purpose |
 |---|---|
-| `nullclaw cron list` | List scheduled tasks |
-| `nullclaw cron add "0 * * * *" "command"` | Add a recurring shell task |
-| `nullclaw cron add-agent "0 * * * *" "prompt" --model <model>` | Add a recurring agent task |
-| `nullclaw cron once 10m "command"` | Add a one-shot delayed shell task |
-| `nullclaw cron once-agent 10m "prompt" --model <model>` | Add a one-shot delayed agent task |
-| `nullclaw cron run <id>` | Run a task immediately |
-| `nullclaw cron pause <id>` / `resume <id>` | Pause or resume a task |
-| `nullclaw cron remove <id>` | Delete a task |
-| `nullclaw cron runs <id>` | Show recent run history |
-| `nullclaw cron update <id> --expression ... --command ... --prompt ... --model ... --enable/--disable` | Update an existing task |
+| `nilclaw cron list` | List scheduled tasks |
+| `nilclaw cron add "0 * * * *" "command"` | Add a recurring shell task |
+| `nilclaw cron add-agent "0 * * * *" "prompt" --model <model>` | Add a recurring agent task |
+| `nilclaw cron once 10m "command"` | Add a one-shot delayed shell task |
+| `nilclaw cron once-agent 10m "prompt" --model <model>` | Add a one-shot delayed agent task |
+| `nilclaw cron run <id>` | Run a task immediately |
+| `nilclaw cron pause <id>` / `resume <id>` | Pause or resume a task |
+| `nilclaw cron remove <id>` | Delete a task |
+| `nilclaw cron runs <id>` | Show recent run history |
+| `nilclaw cron update <id> --expression ... --command ... --prompt ... --model ... --enable/--disable` | Update an existing task |
 
 ### `skills`
 
 | Command | Purpose |
 |---|---|
-| `nullclaw skills list` | List installed skills |
-| `nullclaw skills install <source>` | Install from a GitHub URL or local path |
-| `nullclaw skills remove <name>` | Remove a skill |
-| `nullclaw skills info <name>` | Show skill metadata |
+| `nilclaw skills list` | List installed skills |
+| `nilclaw skills install <source>` | Install from a GitHub URL or local path |
+| `nilclaw skills remove <name>` | Remove a skill |
+| `nilclaw skills info <name>` | Show skill metadata |
 
 ## Data, models, and workspace
 
@@ -115,30 +115,30 @@ Notes:
 
 | Command | Purpose |
 |---|---|
-| `nullclaw memory stats` | Show resolved memory config and counters |
-| `nullclaw memory count` | Show total number of memory entries |
-| `nullclaw memory reindex` | Rebuild the vector index |
-| `nullclaw memory search "query" --limit 10` | Run retrieval against memory |
-| `nullclaw memory get <key>` | Show one memory entry |
-| `nullclaw memory list --category task --limit 20` | List memory entries by category |
-| `nullclaw memory drain-outbox` | Drain the durable vector outbox queue |
-| `nullclaw memory forget <key>` | Delete one memory entry |
+| `nilclaw memory stats` | Show resolved memory config and counters |
+| `nilclaw memory count` | Show total number of memory entries |
+| `nilclaw memory reindex` | Rebuild the vector index |
+| `nilclaw memory search "query" --limit 10` | Run retrieval against memory |
+| `nilclaw memory get <key>` | Show one memory entry |
+| `nilclaw memory list --category task --limit 20` | List memory entries by category |
+| `nilclaw memory drain-outbox` | Drain the durable vector outbox queue |
+| `nilclaw memory forget <key>` | Delete one memory entry |
 
 ### `workspace`, `capabilities`, `models`, `migrate`
 
 | Command | Purpose |
 |---|---|
-| `nullclaw workspace edit AGENTS.md` | Open a bootstrap markdown file in `$EDITOR` |
-| `nullclaw workspace reset-md --dry-run` | Preview workspace markdown reset |
-| `nullclaw workspace reset-md --include-bootstrap --clear-memory-md` | Reset bundled markdown files and optionally clear extra files |
-| `nullclaw capabilities` | Show a text capability summary |
-| `nullclaw capabilities --json` | Show a JSON capability manifest |
-| `nullclaw models list` | List providers and default models |
-| `nullclaw models info <model>` | Show model details |
-| `nullclaw models benchmark` | Run model latency benchmark |
-| `nullclaw models refresh` | Refresh the model catalog |
-| `nullclaw migrate openclaw --dry-run` | Preview OpenClaw migration |
-| `nullclaw migrate openclaw --source /path/to/workspace` | Migrate from a specific source workspace |
+| `nilclaw workspace edit AGENTS.md` | Open a bootstrap markdown file in `$EDITOR` |
+| `nilclaw workspace reset-md --dry-run` | Preview workspace markdown reset |
+| `nilclaw workspace reset-md --include-bootstrap --clear-memory-md` | Reset bundled markdown files and optionally clear extra files |
+| `nilclaw capabilities` | Show a text capability summary |
+| `nilclaw capabilities --json` | Show a JSON capability manifest |
+| `nilclaw models list` | List providers and default models |
+| `nilclaw models info <model>` | Show model details |
+| `nilclaw models benchmark` | Run model latency benchmark |
+| `nilclaw models refresh` | Refresh the model catalog |
+| `nilclaw migrate openclaw --dry-run` | Preview OpenClaw migration |
+| `nilclaw migrate openclaw --source /path/to/workspace` | Migrate from a specific source workspace |
 
 Notes:
 
@@ -151,9 +151,9 @@ Notes:
 
 | Command | Purpose |
 |---|---|
-| `nullclaw hardware scan` | Scan connected hardware |
-| `nullclaw hardware flash <firmware_file> [--target <board>]` | Flash firmware to a device (currently a placeholder command) |
-| `nullclaw hardware monitor` | Monitor hardware devices (currently a placeholder command) |
+| `nilclaw hardware scan` | Scan connected hardware |
+| `nilclaw hardware flash <firmware_file> [--target <board>]` | Flash firmware to a device (currently a placeholder command) |
+| `nilclaw hardware monitor` | Monitor hardware devices (currently a placeholder command) |
 
 ### Top-level machine-facing flags
 
@@ -161,18 +161,18 @@ These are more useful for automation, probing, or integrations than for normal d
 
 | Command | Purpose |
 |---|---|
-| `nullclaw --export-manifest` | Export the runtime manifest |
-| `nullclaw --list-models` | Print model information |
-| `nullclaw --probe-provider-health` | Probe provider health |
-| `nullclaw --probe-channel-health` | Probe channel health |
-| `nullclaw --from-json` | Run a JSON-driven entry path |
+| `nilclaw --export-manifest` | Export the runtime manifest |
+| `nilclaw --list-models` | Print model information |
+| `nilclaw --probe-provider-health` | Probe provider health |
+| `nilclaw --probe-channel-health` | Probe channel health |
+| `nilclaw --from-json` | Run a JSON-driven entry path |
 
 ## Recommended troubleshooting order
 
-1. `nullclaw doctor`
-2. `nullclaw status`
-3. `nullclaw channel status`
-4. `nullclaw agent -m "self-check"`
+1. `nilclaw doctor`
+2. `nilclaw status`
+3. `nilclaw channel status`
+4. `nilclaw agent -m "self-check"`
 5. If gateway is involved, also run `curl http://127.0.0.1:3000/health`
 
 ## Next Steps

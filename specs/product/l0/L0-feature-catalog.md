@@ -1,4 +1,4 @@
-# NilClaw Feature Catalog (Baseline from NullClaw)
+# NilClaw Feature Catalog (Baseline from NilClaw)
 
 - **Layer:** L0
 - **Spec ID:** L0-feature-catalog
@@ -7,7 +7,7 @@
 - **Last Updated:** 2026-03-10
 
 ## Description
-This catalog defines top-level product features NilClaw must provide (baseline from current NullClaw behavior). These are high-authority feature truths, not implementation details or constraints.
+This catalog defines top-level product features NilClaw must provide (baseline from current NilClaw behavior). These are high-authority feature truths, not implementation details or constraints.
 
 ## Feature Truths
 

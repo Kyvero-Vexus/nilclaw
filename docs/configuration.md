@@ -18,7 +18,7 @@ NilClaw is compatible with OpenClaw config structure and uses `snake_case` keys.
 
 **If you came from ...**
 
-- [Installation](./installation.md): this page takes over once `nullclaw` is installed and ready for first-run setup
+- [Installation](./installation.md): this page takes over once `nilclaw` is installed and ready for first-run setup
 - [README](./README.md): this is the detailed config path after choosing the operator/user docs route
 - [Gateway API](./gateway-api.md): come back here when the API workflow depends on concrete `gateway` or channel settings
 
@@ -223,20 +223,20 @@ Notes:
 After each config change:
 
 ```bash
-nullclaw doctor
-nullclaw status
-nullclaw channel status
+nilclaw doctor
+nilclaw status
+nilclaw channel status
 ```
 
 If gateway/channel changed, also run:
 
 ```bash
-nullclaw gateway
+nilclaw gateway
 ```
 
 ## Next Steps
 
-- Run `nullclaw doctor` and `nullclaw status` after each edit to confirm the config still loads cleanly
+- Run `nilclaw doctor` and `nilclaw status` after each edit to confirm the config still loads cleanly
 - Use [Usage and Operations](./usage.md) for operational checks, service mode, and troubleshooting flow
 - Review [Security](./security.md) before enabling broader autonomy, public bind, or wildcard allowlists
 

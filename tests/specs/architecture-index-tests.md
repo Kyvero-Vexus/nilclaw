@@ -5,14 +5,14 @@ Spec ID: L2-UNIT-architecture-index-tests
 Status: draft
 Last Updated: 2026-03-10
 Traceability:
-  L1: [L1-ARCH-nullclaw-baseline-index]
+  L1: [L1-ARCH-nilclaw-baseline-index]
   L0: [F-UI-GATEWAY, F-AGENT-SESSIONS, F-CAP-TOOLS, C-CONFIG-EXPLICITNESS]
 ---
 
 # L2-UNIT-architecture-index-tests
 
 ## Overview
-L2 traceability bridge for L1-ARCH-nullclaw-baseline-index. This spec is covered by linkage tests in `tests/traceability-linkage-tests.lisp` and mapped in `tests/TRACEABILITY-L3-MATRIX.md`.
+L2 traceability bridge for L1-ARCH-nilclaw-baseline-index. This spec is covered by linkage tests in `tests/traceability-linkage-tests.lisp` and mapped in `tests/TRACEABILITY-L3-MATRIX.md`.
 
 ## Assertions
 - The corresponding L1 specification artifact exists and remains parseable.

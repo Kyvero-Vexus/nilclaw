@@ -394,5 +394,5 @@ The config module handles parsing, validation, serialization, and roundtripping 
 ## Environment Variable Overrides
 
 ### applyEnvOverrides does not crash on default config
-- **Action**: Call applyEnvOverrides with no NULLCLAW_* env vars set
+- **Action**: Call applyEnvOverrides with no NILCLAW_* env vars set
 - **Expected**: Default values remain intact, no crash

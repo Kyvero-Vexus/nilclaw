@@ -199,7 +199,7 @@ Handles voice/audio messages from Telegram:
 1. If no Transcriber is configured, return null immediately.
 2. Call Telegram `getFile` API with the `file_id` to obtain the server-side `file_path`.
 3. Download the file from `https://api.telegram.org/file/bot<token>/<file_path>`.
-4. Save to temp file: `<tmp_dir>/nullclaw_tg_voice_<pid>.ogg`.
+4. Save to temp file: `<tmp_dir>/nilclaw_tg_voice_<pid>.ogg`.
 5. Transcribe via the configured Transcriber.
 6. Clean up temp file.
 7. Return transcribed text (or null on any failure).
@@ -209,8 +209,8 @@ and result in a null return — voice transcription failures are non-fatal.
 
 ### Constraints
 
-- Temp files are named with PID to avoid collisions: `nullclaw_voice_<pid>.bin`,
-  `nullclaw_tg_voice_<pid>.ogg`.
+- Temp files are named with PID to avoid collisions: `nilclaw_voice_<pid>.bin`,
+  `nilclaw_tg_voice_<pid>.ogg`.
 - Audio streaming to temp file uses 32KB read buffer.
 - Curl stdout is capped at 4MB for transcription responses.
 - Temp files are always cleaned up (even on error paths).

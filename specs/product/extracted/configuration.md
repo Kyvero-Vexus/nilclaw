@@ -19,14 +19,14 @@ profile presets, and backward-compatible flat field aliases.
 
 ## Config File Location
 
-- **Default directory**: `~/.nullclaw/` (overridden by `NULLCLAW_HOME` env var)
+- **Default directory**: `~/.nilclaw/` (overridden by `NILCLAW_HOME` env var)
 - **Config file**: `<config_dir>/config.json`
 - **Default workspace**: `<config_dir>/workspace/`
 - **Max config file size**: 64 KB (read limit)
 
 ## Load Sequence
 
-1. Determine config directory: `NULLCLAW_HOME` env var, or `~/.nullclaw/`.
+1. Determine config directory: `NILCLAW_HOME` env var, or `~/.nilclaw/`.
 2. Construct `config_path` = `<config_dir>/config.json`.
 3. Construct `default_workspace_dir` = `<config_dir>/workspace/`.
 4. Initialize config with all defaults.
@@ -43,13 +43,13 @@ Applied **after** JSON parsing. All override their respective config fields:
 
 | Env Var                        | Config Field              | Type    | Constraint        |
 |--------------------------------|---------------------------|---------|--------------------|
-| `NULLCLAW_PROVIDER`            | `default_provider`        | string  |                    |
-| `NULLCLAW_MODEL`               | `default_model`           | string  |                    |
-| `NULLCLAW_TEMPERATURE`         | `default_temperature`     | float   | 0.0–2.0            |
-| `NULLCLAW_GATEWAY_PORT`        | `gateway.port`            | u16     |                    |
-| `NULLCLAW_GATEWAY_HOST`        | `gateway.host`            | string  |                    |
-| `NULLCLAW_WORKSPACE`           | `workspace_dir`           | string  |                    |
-| `NULLCLAW_ALLOW_PUBLIC_BIND`   | `gateway.allow_public_bind` | bool  | "1" or "true"      |
+| `NILCLAW_PROVIDER`            | `default_provider`        | string  |                    |
+| `NILCLAW_MODEL`               | `default_model`           | string  |                    |
+| `NILCLAW_TEMPERATURE`         | `default_temperature`     | float   | 0.0–2.0            |
+| `NILCLAW_GATEWAY_PORT`        | `gateway.port`            | u16     |                    |
+| `NILCLAW_GATEWAY_HOST`        | `gateway.host`            | string  |                    |
+| `NILCLAW_WORKSPACE`           | `workspace_dir`           | string  |                    |
+| `NILCLAW_ALLOW_PUBLIC_BIND`   | `gateway.allow_public_bind` | bool  | "1" or "true"      |
 
 ## Top-Level Config Schema
 
@@ -315,7 +315,7 @@ overrides always win). Applied **after** JSON parsing.
 | `sidecar_path`             | string | `""`                  | Sidecar binary path          |
 | `qdrant_url`               | string | `""`                  | Qdrant endpoint              |
 | `qdrant_api_key`           | string | `""`                  | Qdrant API key               |
-| `qdrant_collection`        | string | `"nullclaw_memories"` | Qdrant collection name       |
+| `qdrant_collection`        | string | `"nilclaw_memories"` | Qdrant collection name       |
 | `pgvector_table`           | string | `"memory_embeddings"` | pgvector table name          |
 | `ann_candidate_multiplier` | u32    | `12`                  | ANN candidate prefilter multiplier |
 | `ann_min_candidates`       | u32    | `64`                  | Minimum ANN candidates       |
@@ -436,7 +436,7 @@ Hybrid sub-config:
 | `port`       | u16    | `6379`        | Redis port        |
 | `password`   | string | `""`          | Redis password    |
 | `db_index`   | u8     | `0`           | Redis DB index    |
-| `key_prefix` | string | `"nullclaw"`  | Key prefix        |
+| `key_prefix` | string | `"nilclaw"`  | Key prefix        |
 | `ttl_seconds`| u32    | `0`           | TTL (0 = no expiry)|
 
 #### `memory.api`
@@ -555,7 +555,7 @@ Computer use sub-config: `endpoint`, `api_key`, `timeout_ms` (15000),
 
 | Field          | Type   | Default      | Description            |
 |----------------|--------|--------------|------------------------|
-| `format`       | string | `"nullclaw"` | Identity format        |
+| `format`       | string | `"nilclaw"` | Identity format        |
 | `aieos_path`   | string?| null         | AIEOS file path        |
 | `aieos_inline` | string?| null         | Inline AIEOS content   |
 

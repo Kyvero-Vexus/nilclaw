@@ -1,7 +1,7 @@
 (in-package :asdf-user)
 
 (defsystem "nilclaw"
-  :description "Common Lisp agent harness — clean-room rewrite inspired by NullClaw"
+  :description "Common Lisp agent harness — clean-room rewrite inspired by NilClaw"
   :version "0.1.0"
   :author "Chrysolambda"
   :license "AGPL-3.0-or-later"

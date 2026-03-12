@@ -113,7 +113,7 @@
                :auto-disable-vision-on-error t)
          :type list)
   (secrets (list :encrypt t) :type list)
-  (identity (list :format "nullclaw" :aieos-path nil) :type list)
+  (identity (list :format "nilclaw" :aieos-path nil) :type list)
   (hardware (list :enabled nil :transport "none" :serial-port nil :baud-rate 115200) :type list)
   (security (list :sandbox-enabled nil :sandbox-backend "auto"
                   :max-memory-mb 512 :max-cpu-time-seconds 60

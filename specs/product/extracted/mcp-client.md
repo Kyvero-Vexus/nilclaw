@@ -60,7 +60,7 @@ Request:
   "params": {
     "protocolVersion": "2024-11-05",
     "capabilities": {},
-    "clientInfo": {"name": "nullclaw", "version": "<version>"}
+    "clientInfo": {"name": "nilclaw", "version": "<version>"}
   }
 }
 ```

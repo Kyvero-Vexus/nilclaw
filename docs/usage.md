@@ -27,58 +27,58 @@ This page focuses on day-to-day commands, service mode, and troubleshooting.
 1. Initialize:
 
 ```bash
-nullclaw onboard --interactive
+nilclaw onboard --interactive
 ```
 
 2. Send a test message:
 
 ```bash
-nullclaw agent -m "hello nullclaw"
+nilclaw agent -m "hello nilclaw"
 ```
 
 3. Start long-running gateway:
 
 ```bash
-nullclaw gateway
+nilclaw gateway
 ```
 
 ## Command Quick Reference
 
 | Command | Purpose |
 |---|---|
-| `nullclaw onboard --api-key sk-... --provider openrouter` | Quick setup for provider and API key |
-| `nullclaw onboard --interactive` | Full interactive setup |
-| `nullclaw onboard --channels-only` | Reconfigure channels and allowlists only |
-| `nullclaw agent -m "..."` | Single-message mode |
-| `nullclaw agent` | Interactive mode |
-| `nullclaw gateway` | Start long-running runtime (default `127.0.0.1:3000`) |
-| `nullclaw service install` | Install background service |
-| `nullclaw service start` | Start background service |
-| `nullclaw service status` | Check service status |
-| `nullclaw service stop` | Stop background service |
-| `nullclaw service uninstall` | Uninstall background service |
-| `nullclaw doctor` | Run diagnostics |
-| `nullclaw status` | Show global status |
-| `nullclaw channel status` | Show channel health |
-| `nullclaw channel start telegram` | Start a specific channel |
-| `nullclaw migrate openclaw --dry-run` | Dry-run OpenClaw migration |
-| `nullclaw migrate openclaw` | Execute OpenClaw migration |
+| `nilclaw onboard --api-key sk-... --provider openrouter` | Quick setup for provider and API key |
+| `nilclaw onboard --interactive` | Full interactive setup |
+| `nilclaw onboard --channels-only` | Reconfigure channels and allowlists only |
+| `nilclaw agent -m "..."` | Single-message mode |
+| `nilclaw agent` | Interactive mode |
+| `nilclaw gateway` | Start long-running runtime (default `127.0.0.1:3000`) |
+| `nilclaw service install` | Install background service |
+| `nilclaw service start` | Start background service |
+| `nilclaw service status` | Check service status |
+| `nilclaw service stop` | Stop background service |
+| `nilclaw service uninstall` | Uninstall background service |
+| `nilclaw doctor` | Run diagnostics |
+| `nilclaw status` | Show global status |
+| `nilclaw channel status` | Show channel health |
+| `nilclaw channel start telegram` | Start a specific channel |
+| `nilclaw migrate openclaw --dry-run` | Dry-run OpenClaw migration |
+| `nilclaw migrate openclaw` | Execute OpenClaw migration |
 
 ## Service Mode Recommendations
 
 For long-running deployments:
 
 ```bash
-nullclaw service install
-nullclaw service start
-nullclaw service status
+nilclaw service install
+nilclaw service start
+nilclaw service status
 ```
 
 After significant config changes, restart service:
 
 ```bash
-nullclaw service stop
-nullclaw service start
+nilclaw service stop
+nilclaw service start
 ```
 
 ## Gateway and Pairing
@@ -99,7 +99,7 @@ curl http://127.0.0.1:3000/health
 
 Steps:
 
-1. Run `nullclaw doctor` for exact error details.
+1. Run `nilclaw doctor` for exact error details.
 2. Compare with `config.example.json` for key names and nesting.
 3. Validate JSON syntax (commas, quotes, braces).
 
@@ -114,13 +114,13 @@ Common causes:
 Checks:
 
 ```bash
-nullclaw status
+nilclaw status
 ```
 
 Then re-run onboarding:
 
 ```bash
-nullclaw onboard --interactive
+nilclaw onboard --interactive
 ```
 
 ### 3) Channel receives no messages
@@ -129,7 +129,7 @@ Check:
 
 - `channels.<name>.accounts.*` token/webhook/account settings.
 - `allow_from` accidentally set to empty array.
-- `nullclaw channel status` health output.
+- `nilclaw channel status` health output.
 
 ### 4) Gateway starts but is unreachable externally
 
@@ -144,16 +144,16 @@ Common causes:
 After config edits:
 
 ```bash
-nullclaw doctor
-nullclaw status
-nullclaw channel status
-nullclaw agent -m "self-check"
+nilclaw doctor
+nilclaw status
+nilclaw channel status
+nilclaw agent -m "self-check"
 ```
 
 For gateway scenarios:
 
 ```bash
-nullclaw gateway
+nilclaw gateway
 curl http://127.0.0.1:3000/health
 ```
 

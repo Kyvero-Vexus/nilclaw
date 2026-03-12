@@ -8,9 +8,9 @@ Traceability:
   L0: [F-UI-CLI, F-AGENT-SCHEDULING, C-SAFE-EXTERNAL-ACTION-GATING]
 ---
 
-# Usage and Operations Specification (Adapted from NullClaw docs)
+# Usage and Operations Specification (Adapted from NilClaw docs)
 
-> Frozen reference — do not modify. Source: NullClaw docs/en/usage.md
+> Frozen reference — do not modify. Source: NilClaw docs/en/usage.md
 
 ## Overview
 

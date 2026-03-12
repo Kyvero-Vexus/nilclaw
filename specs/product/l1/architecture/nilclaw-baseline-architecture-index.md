@@ -1,14 +1,14 @@
 ---
 Layer: L1
 Lane: architecture
-Spec ID: L1-ARCH-nullclaw-baseline-index
+Spec ID: L1-ARCH-nilclaw-baseline-index
 Status: draft
 Last Updated: 2026-03-10
 Traceability:
   L0: [F-UI-GATEWAY, F-AGENT-SESSIONS, F-CAP-TOOLS, C-CONFIG-EXPLICITNESS]
 ---
 
-# NullClaw Baseline Architecture Index (L1)
+# NilClaw Baseline Architecture Index (L1)
 
 ## Purpose
 Provide architectural segmentation index for current NilClaw behavior baseline.

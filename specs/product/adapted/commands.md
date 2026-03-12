@@ -8,9 +8,9 @@ Traceability:
   L0: [F-UI-CLI, F-CONFIG-MUTABILITY]
 ---
 
-# Commands Specification (Adapted from NullClaw docs)
+# Commands Specification (Adapted from NilClaw docs)
 
-> Frozen reference — do not modify. Source: NullClaw docs/en/commands.md
+> Frozen reference — do not modify. Source: NilClaw docs/en/commands.md
 
 ## Overview
 

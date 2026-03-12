@@ -8,9 +8,9 @@ Traceability:
   L0: [F-UI-GATEWAY, F-AGENT-SESSIONS]
 ---
 
-# Architecture Specification (Adapted from NullClaw docs)
+# Architecture Specification (Adapted from NilClaw docs)
 
-> Frozen reference — do not modify. Source: NullClaw docs/en/architecture.md
+> Frozen reference — do not modify. Source: NilClaw docs/en/architecture.md
 
 ## Overview
 

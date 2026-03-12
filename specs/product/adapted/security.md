@@ -8,9 +8,9 @@ Traceability:
   L0: [C-SEC-POLICY-ENFORCEMENT, C-SEC-SANDBOX-BOUNDARY, C-SEC-SECRET-HANDLING]
 ---
 
-# Security Specification (Adapted from NullClaw docs)
+# Security Specification (Adapted from NilClaw docs)
 
-> Frozen reference — do not modify. Source: NullClaw docs/en/security.md
+> Frozen reference — do not modify. Source: NilClaw docs/en/security.md
 
 ## Overview
 

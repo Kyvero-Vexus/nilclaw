@@ -67,7 +67,7 @@ The dispatcher module handles parsing of tool calls from LLM responses, formatti
 - **Expected**: 1 call, name="file_write", content value is "</html>"
 
 ### Compact call with no closing tag
-- **Input**: `<tool_call>file_read{"path": "/home/user/.nullclaw/void.md"}`
+- **Input**: `<tool_call>file_read{"path": "/home/user/.nilclaw/void.md"}`
 - **Expected**: 1 call, name="file_read", path parsed correctly
 
 ### Malformed JSON inside tag → skipped
@@ -91,8 +91,8 @@ The dispatcher module handles parsing of tool calls from LLM responses, formatti
 ## Function-Tag Format
 
 ### Single parameter
-- **Input**: `<function=shell><parameter=command>ps aux | grep nullclaw</parameter></function>`
-- **Expected**: name="shell", arguments contain "command" and "ps aux | grep nullclaw"
+- **Input**: `<function=shell><parameter=command>ps aux | grep nilclaw</parameter></function>`
+- **Expected**: name="shell", arguments contain "command" and "ps aux | grep nilclaw"
 
 ### Multiple parameters
 - **Input**: `<function=file_write><parameter=path>/tmp/test.txt</parameter><parameter=content>hello world</parameter></function>`

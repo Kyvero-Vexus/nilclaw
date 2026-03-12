@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - GitHub Actions workflow for automated documentation deployment
 
 ### Changed
-- Project renamed from NullClaw to NilClaw
+- Project renamed from NilClaw to NilClaw
 - Updated all documentation to reference NilClaw consistently
 - Removed references to Zig and Homebrew (project uses SBCL/Quicklisp)
 - Enhanced README with badges, features list, and better organization

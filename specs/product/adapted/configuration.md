@@ -8,9 +8,9 @@ Traceability:
   L0: [F-CONFIG-MUTABILITY, C-CONFIG-EXPLICITNESS]
 ---
 
-# Configuration Specification (Adapted from NullClaw docs)
+# Configuration Specification (Adapted from NilClaw docs)
 
-> Frozen reference — do not modify. Source: NullClaw docs/en/configuration.md
+> Frozen reference — do not modify. Source: NilClaw docs/en/configuration.md
 
 ## Overview
 
@@ -20,8 +20,8 @@ the initial config.
 
 ## Config File Path
 
-- Linux/macOS: `~/.nullclaw/config.json`
-- Windows: `%USERPROFILE%\.nullclaw\config.json`
+- Linux/macOS: `~/.nilclaw/config.json`
+- Windows: `%USERPROFILE%\.nilclaw\config.json`
 
 ## Core Sections
 

@@ -8,9 +8,9 @@ Traceability:
   L0: [F-UI-GATEWAY, F-CH-WEBHOOK, C-SEC-AUTH-BOUNDARY]
 ---
 
-# Gateway API Specification (Adapted from NullClaw docs)
+# Gateway API Specification (Adapted from NilClaw docs)
 
-> Frozen reference — do not modify. Source: NullClaw docs/en/gateway-api.md
+> Frozen reference — do not modify. Source: NilClaw docs/en/gateway-api.md
 
 ## Overview
 

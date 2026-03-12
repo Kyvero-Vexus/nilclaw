@@ -43,7 +43,7 @@
     (is (null calls))))
 
 (test dispatcher-function-tag
-  (let ((call (nilclaw/dispatcher:parse-function-tag "<function=shell><parameter=command>ps aux | grep nullclaw</parameter></function>")))
+  (let ((call (nilclaw/dispatcher:parse-function-tag "<function=shell><parameter=command>ps aux | grep nilclaw</parameter></function>")))
     (is (string= "shell" (nilclaw/dispatcher:tool-call-name call)))
     (is (search "command" (nilclaw/dispatcher:tool-call-arguments-json call))))
   (let ((call (nilclaw/dispatcher:parse-function-tag "<function=file_write><parameter=path>/tmp/test.txt</parameter><parameter=content>hello world</parameter></function>")))

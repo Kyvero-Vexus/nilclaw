@@ -22,6 +22,6 @@ These describe how specs are managed, and are portable to other projects.
 ## Compatibility Links
 For continuity with existing tasks/tools, the old paths are kept as symlinks:
 - `specs/extracted` -> `specs/product/extracted`
-- `specs/nullclaw-adapted` -> `specs/product/adapted`
+- `specs/nilclaw-adapted` -> `specs/product/adapted`
 - `specs/l0` -> `specs/product/l0`
 - `specs/templates` -> `specs/meta/templates`

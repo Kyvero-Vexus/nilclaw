@@ -207,7 +207,7 @@ The compatible provider module implements an OpenAI-compatible API client suppor
 ## User Agent Validation
 
 ### Accepts valid
-- "nullclaw/1.0" → valid
+- "nilclaw/1.0" → valid
 
 ### Rejects CRLF injection
 - "bad\r\nX-Test: 1" → invalid
