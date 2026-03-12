@@ -100,6 +100,12 @@
                 (setf (config-mcp-servers cfg) val))
                (:model-routes
                 (setf (config-model-routes cfg) val))
+               ;; Nested :MODELS (:PROVIDERS ...) structure from migrated configs
+               (:models
+                (let ((providers-plist (getf val :providers)))
+                  (when providers-plist
+                    (setf (config-providers cfg)
+                          (parse-nested-providers providers-plist)))))
                (otherwise
                 (warn "Unknown config key: ~S" key))))
     cfg))
@@ -112,6 +118,22 @@
     (loop for (key val) on overrides by #'cddr
           do (setf (getf result key) val))
     result))
+
+;;; Nested providers parsing from migrated configs
+
+(declaim (ftype (function (list) list) parse-nested-providers))
+(defun parse-nested-providers (providers-plist)
+  "Parse nested providers plist from migrated config.
+   Input: (:LMSTUDIO (:BASE-URL \"...\" :API-KEY \"...\" :MODELS (...)) ...)
+   Output: ((:NAME \"lmstudio\" :API-KEY \"...\" :BASE-URL \"...\") ...)"
+  (declare (type list providers-plist))
+  (loop for (provider-key provider-val) on providers-plist by #'cddr
+        when (and provider-key (keywordp provider-key) provider-val)
+        collect (list :name (string-downcase (symbol-name provider-key))
+                      :api-key (getf provider-val :api-key)
+                      :base-url (getf provider-val :base-url)
+                      :native-tools (let ((v (getf provider-val :native-tools :unset)))
+                                      (if (eq v :unset) t v)))))
 
 ;;; File-based config loading
 

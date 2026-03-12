@@ -129,7 +129,15 @@
            (type provider-runtime runtime)
            (type backoff-config backoff-config))
   (let* ((max-attempts (+ 1 (provider-runtime-max-retries runtime)))
-         (url (or (provider-runtime-base-url runtime) "https://api.openai.com/v1/chat/completions"))
+         (base-url (provider-runtime-base-url runtime))
+         ;; Build full URL: append /chat/completions if base-url doesn't already end with it
+         (url (if base-url
+                  (if (and (>= (length base-url) 17)
+                           (string= "/chat/completions" 
+                                    (subseq base-url (- (length base-url) 17))))
+                      base-url
+                      (concatenate 'string base-url "/chat/completions"))
+                  "https://api.openai.com/v1/chat/completions"))
          (body (build-request-body request runtime)))
     (labels ((attempt (n)
                (setf *current-provider-headers* (build-request-headers runtime))
