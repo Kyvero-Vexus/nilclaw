@@ -121,23 +121,45 @@
                            raw-messages)
                        ;; Fallback: wrap in list
                        (list raw-messages)))
+         ;; Base payload
          (payload `(("model" . ,model)
-                    ("messages" . ,messages))))
+                    ("messages" . ,messages)))
+         ;; Anthropic requires max_tokens field
+         (provider-name (provider-runtime-name runtime))
+         (payload (if (string-equal provider-name "anthropic")
+                      (append payload '(("max_tokens" . 4096)))
+                      payload)))
     (with-output-to-string (s)
       (cl-json:encode-json payload s))))
 
 ;;; Response parsing
 (declaim (ftype (function (string) (or null string)) parse-provider-content))
 (defun parse-provider-content (response-body)
-  "Extract content from provider API JSON response."
+  "Extract content from provider API JSON response.
+   Handles both OpenAI-style (choices[].message.content) and
+   Anthropic-style (content[0].text) response formats."
   (declare (type string response-body))
   (handler-case
     (let ((json (cl-json:decode-json-from-string response-body)))
+      ;; Try OpenAI-style format first
       (let ((choices (cdr (assoc :choices json))))
         (when (and choices (listp choices) (> (length choices) 0))
           (let ((message (cdr (assoc :message (car choices)))))
             (when message
-              (cdr (assoc :content message)))))))
+              (let ((content (cdr (assoc :content message))))
+                (when content
+                  (return-from parse-provider-content content)))))))
+      ;; Try Anthropic-style format
+      (let ((content-array (cdr (assoc :content json))))
+        (when (and content-array (listp content-array) (> (length content-array) 0))
+          (let ((first-content (car content-array)))
+            (when (and (listp first-content)
+                       (string-equal (cdr (assoc :type first-content)) "text"))
+              (let ((text (cdr (assoc :text first-content))))
+                (when text
+                  (return-from parse-provider-content text)))))))
+      ;; Fallback: return nil if neither format matches
+      nil)
     (error () nil)))
 
 ;;; HTTP transport with backoff and 429 handling

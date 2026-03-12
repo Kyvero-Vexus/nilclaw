@@ -32,11 +32,24 @@
 (defun build-request-headers (runtime)
   "Build HTTP headers for provider request."
   (declare (type provider-runtime runtime))
-  (let ((api-key (provider-runtime-api-key runtime)))
-    (if (and api-key (> (length api-key) 0))
-        `(("Authorization" . ,(build-auth-header api-key))
-          ("Content-Type" . "application/json"))
-        '(("Content-Type" . "application/json")))))
+  (let ((api-key (provider-runtime-api-key runtime))
+        (provider-name (provider-runtime-name runtime)))
+    ;; Anthropic uses different headers than OpenAI-compatible providers
+    (cond
+      ;; Anthropic provider: x-api-key and anthropic-version headers
+      ((string-equal provider-name "anthropic")
+       (let ((headers `(("Content-Type" . "application/json")
+                        ("anthropic-version" . "2023-06-01"))))
+         (if (and api-key (> (length api-key) 0))
+             (cons `("x-api-key" . ,api-key) headers)
+             headers)))
+      ;; OpenAI-compatible providers: Authorization Bearer
+      ((and api-key (> (length api-key) 0))
+       `(("Authorization" . ,(build-auth-header api-key))
+         ("Content-Type" . "application/json")))
+      ;; No API key
+      (t
+       '(("Content-Type" . "application/json"))))))
 
 ;;; Stub implementation when Dexador is not available
 (defun dexador-backend-stub (url method body)
