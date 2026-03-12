@@ -88,7 +88,9 @@
 
 (defun main ()
   "CLI entry point for NilClaw."
-  (let* ((args (uiop:command-line-arguments))
+  (let* ((raw-args (uiop:command-line-arguments))
+         ;; Filter out the "--" separator that SBCL includes
+         (args (remove "--" raw-args :test #'string=))
          (command (first args)))
     (cond
       ((or (null command) (string= command "start"))

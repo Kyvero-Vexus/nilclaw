@@ -95,17 +95,22 @@
   (with-open-file (s path :direction :input)
     (read-json-value s)))
 
-;;; Key conversion: "camelCase" / "snake_case" -> :lisp-case
-
+;;; Key conversion: "camelCase" / "snake_case" / "SCREAMING_SNAKE_CASE" -> :lisp-case
 (defun to-lisp-key (s)
   (intern
    (string-upcase
     (with-output-to-string (out)
       (loop for i from 0 below (length s)
             for c = (char s i)
+            for prev-c = (if (> i 0) (char s (1- i)) nil)
             do (cond
                  ((char= c #\_) (write-char #\- out))
-                 ((and (upper-case-p c) (> i 0))
+                 ;; Only insert dash for camelCase (lower->upper transition)
+                 ;; Not for SCREAMING_SNAKE_CASE (all upper) or starting caps
+                 ((and (upper-case-p c)
+                       (> i 0)
+                       prev-c
+                       (lower-case-p prev-c))
                   (write-char #\- out)
                   (write-char c out))
                  (t (write-char c out))))))
@@ -227,6 +232,6 @@
         (write-string result s))
       (format t "Written NilClaw config: ~A~%~%" output)
       (format t "Your config is now pure Common Lisp. Edit it directly!~%")
-      (format t "NilClaw searches: ~/.nilclaw/init.lisp, ~/.nilclaw/config.lisp~%"))))
+      (format t "NilClaw searches: ~~/.nilclaw/init.lisp, ~~/.nilclaw/config.lisp~%"))))
 
 (main)

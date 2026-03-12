@@ -150,7 +150,7 @@
          (load-lisp-config path))
         ((string-equal ext "json")
          ;; Fall back to JSON parser for migration period
-         (parse-config (uiop:read-file-string path)))
+         (parse-config-from-string (uiop:read-file-string path)))
         (t
          (error "Unknown config file type: ~A (expected .lisp or .json)" ext))))))
 

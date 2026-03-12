@@ -1,15 +1,39 @@
 #!/bin/bash
 # nilclaw — launcher script for NilClaw daemon
 # Install: copy to ~/.local/bin/nilclaw or /usr/local/bin/nilclaw
+# Or set NILCLAW_ROOT to point to the project directory
 
 set -euo pipefail
 
-NILCLAW_ROOT="${NILCLAW_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
+# Default to ~/projects/nilclaw if not set and not in project tree
+if [ -z "${NILCLAW_ROOT:-}" ]; then
+    script_dir="$(cd "$(dirname "$0")" && pwd)"
+    if [ -f "${script_dir}/../nilclaw.asd" ]; then
+        # Script is in project's bin/ directory
+        NILCLAW_ROOT="$(cd "${script_dir}/.." && pwd)"
+    elif [ -d "$HOME/projects/nilclaw" ]; then
+        # Default install location
+        NILCLAW_ROOT="$HOME/projects/nilclaw"
+    else
+        echo "Error: Cannot find nilclaw project. Set NILCLAW_ROOT environment variable." >&2
+        exit 1
+    fi
+fi
+
 NILCLAW_CONFIG="${NILCLAW_CONFIG:-}"
 
-exec sbcl --noinform --non-interactive \
-    --eval '(require :asdf)' \
-    --eval "(push (truename \"${NILCLAW_ROOT}\") asdf:*central-registry*)" \
-    --eval '(asdf:load-system "nilclaw")' \
-    --eval "(nilclaw/gateway:main)" \
-    -- "$@"
+# Build SBCL arguments - only pass -- if there are arguments
+if [ $# -gt 0 ]; then
+    exec sbcl --noinform --non-interactive \
+        --eval '(require :asdf)' \
+        --eval "(push (truename \"${NILCLAW_ROOT}\") asdf:*central-registry*)" \
+        --eval '(asdf:load-system "nilclaw")' \
+        --eval "(nilclaw/gateway:main)" \
+        -- "$@"
+else
+    exec sbcl --noinform --non-interactive \
+        --eval '(require :asdf)' \
+        --eval "(push (truename \"${NILCLAW_ROOT}\") asdf:*central-registry*)" \
+        --eval '(asdf:load-system "nilclaw")' \
+        --eval '(nilclaw/gateway:main)'
+fi

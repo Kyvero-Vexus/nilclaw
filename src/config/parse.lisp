@@ -3,10 +3,19 @@
 (declaim (optimize (safety 3) (debug 3)))
 
 (defun json-getf (alist key &optional default)
-  "Get value from cl-json decoded alist by keyword key."
+  "Get value from cl-json decoded alist or plist by keyword key.
+   Handles both alist format ((:key . value) ...) and plist format (:key value ...)."
   (declare (type (or null list) alist))
-  (let ((pair (assoc key alist)))
-    (if pair (cdr pair) default)))
+  (cond
+    ;; Null case
+    ((null alist) default)
+    ;; Plist case: (:key val :key2 val2 ...)
+    ((keywordp (car alist))
+     (getf alist key default))
+    ;; Alist case: ((:key . val) (:key2 . val2) ...)
+    (t
+     (let ((pair (assoc key alist)))
+       (if pair (cdr pair) default)))))
 
 (defun json-getf-nested (alist &rest keys)
   "Navigate nested alists by keys."
