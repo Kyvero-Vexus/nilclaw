@@ -67,4 +67,29 @@
    #:find-channel
    #:start-all-channels
    #:stop-all-channels
-   #:health-check-all))
+   #:health-check-all
+
+   ;; Auto-reply system
+   #:auto-reply-rule
+   #:make-auto-reply-rule
+   #:auto-reply-rule-name
+   #:auto-reply-rule-trigger-type
+   #:auto-reply-rule-trigger-pattern
+   #:auto-reply-rule-response
+   #:auto-reply-rule-enabled
+   #:auto-reply-rule-priority
+   #:auto-reply-config
+   #:make-auto-reply-config
+   #:auto-reply-config-enabled
+   #:auto-reply-config-max-replies-per-hour
+   #:auto-reply-config-rules
+   #:auto-reply-config-fallback-response
+   #:auto-reply-runtime
+   #:make-auto-reply-runtime
+   #:auto-reply-runtime-config
+   #:auto-reply-runtime-reply-counters
+   #:make-default-auto-reply-runtime
+   #:rule-matches-p
+   #:can-reply-p
+   #:compute-auto-reply
+   #:channel-receive-with-auto-reply))

@@ -79,7 +79,8 @@
       ((:file "package")
        (:file "types")
        (:file "permissions")
-       (:file "channels")))
+       (:file "channels")
+       (:file "auto-reply")))
      (:module "subagent"
       :components
       ((:file "package")
@@ -110,4 +111,5 @@
      (:file "e2e-smoke-tests")
      (:file "tool-executor-tests")
      (:file "channel-tests")
-     (:file "subagent-tests")))))
+     (:file "subagent-tests")
+     (:file "auto-reply-tests")))))
