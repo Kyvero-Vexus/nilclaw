@@ -84,7 +84,7 @@
 (defvar *http-backend* nil
   "Pluggable HTTP backend. If NIL, falls back to stub behavior.")
 
-(declaim (ftype (function (string keyword string) (values (or null string) fixnum (or null string))) http-backend-request))
+(declaim (ftype (function (string keyword string) (values (or null string) fixnum (or null hash-table))) http-backend-request))
 (defun http-backend-request (url method body)
   "Make HTTP request using configured backend. Returns (values content status headers-alist)."
   (declare (type string url body)
@@ -137,7 +137,7 @@
                    (http-backend-request url :post body)
                  (declare (type (or null string) content)
                           (type fixnum status)
-                          (ignore headers))
+                          (type (or null hash-table) headers))
                  (cond
                    ;; Success
                    ((and (>= status 200) (< status 300))
