@@ -17,7 +17,8 @@
       (:file "parse")
       (:file "provider")
       (:file "validate")
-      (:file "serialize")))
+      (:file "serialize")
+      (:file "lisp-config")))
      (:module "security"
       :components
       ((:file "package")
@@ -112,4 +113,5 @@
      (:file "tool-executor-tests")
      (:file "channel-tests")
      (:file "subagent-tests")
-     (:file "auto-reply-tests")))))
+     (:file "auto-reply-tests")
+     (:file "lisp-config-tests")))))

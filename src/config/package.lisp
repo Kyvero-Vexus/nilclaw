@@ -101,4 +101,11 @@
    #:make-provider-runtime-from-config
    #:list-configured-providers
    #:provider-configured-p
-   #:resolve-default-provider))
+   #:resolve-default-provider
+   ;; Native Lisp config
+   #:find-config-file
+   #:apply-config-plist
+   #:merge-plist
+   #:load-lisp-config
+   #:load-config
+   #:config-to-sexp-string))
