@@ -84,6 +84,108 @@
     (setf *running* nil))
   nil)
 
+;;; CLI chat command
+
+(declaim (ftype (function (&key (:config-path (or null string))
+                                (:model (or null string))
+                                (:system-prompt (or null string)))
+                          (values null &optional))
+                run-chat))
+(defun run-chat (&key config-path model system-prompt)
+  "Run a single-shot chat: read stdin, call provider, print response to stdout."
+  (declare (type (or null string) config-path model system-prompt))
+  ;; Load config
+  (let* ((cfg (nilclaw/config:load-config config-path))
+         ;; Resolve provider/model
+         (default-model (or model
+                            (nilclaw/config:config-default-model cfg)
+                            (format nil "~A/default"
+                                    (nilclaw/config:config-default-provider cfg)))))
+    (declare (type string default-model))
+    (multiple-value-bind (provider-name model-name)
+        (nilclaw/config:parse-model-string default-model)
+      ;; Build provider runtime from config
+      (multiple-value-bind (provider-runtime found-p)
+          (nilclaw/config:make-provider-runtime-from-config
+           cfg provider-name :model default-model)
+        (declare (ignore found-p))
+        (unless provider-runtime
+          (format *error-output* "[nilclaw] Error: could not create provider runtime for ~A~%"
+                  provider-name)
+          (uiop:quit 1))
+        ;; Enable HTTP backend
+        (nilclaw/provider:enable-dexador-backend)
+        ;; Read all of stdin
+        (let ((input (with-output-to-string (s)
+                       (loop for line = (read-line *standard-input* nil nil)
+                             while line
+                             do (write-line line s)))))
+          (let ((trimmed (string-trim '(#\Space #\Tab #\Newline #\Return) input)))
+            (when (zerop (length trimmed))
+              (format *error-output* "[nilclaw] Error: no input provided~%")
+              (uiop:quit 1))
+            ;; Call agent-chat
+            (multiple-value-bind (response success-p)
+                (nilclaw/agent:agent-chat trimmed provider-runtime
+                                         :system-prompt system-prompt)
+              (format t "~A~%" response)
+              (finish-output)
+              (unless success-p
+                (uiop:quit 1)))))))))
+
+;;; Interactive chat REPL
+
+(declaim (ftype (function (&key (:config-path (or null string))
+                                (:model (or null string))
+                                (:system-prompt (or null string)))
+                          (values null &optional))
+                run-chat-repl))
+(defun run-chat-repl (&key config-path model system-prompt)
+  "Run an interactive chat REPL: read lines, call provider, print responses."
+  (declare (type (or null string) config-path model system-prompt))
+  (let* ((cfg (nilclaw/config:load-config config-path))
+         (default-model (or model
+                            (nilclaw/config:config-default-model cfg)
+                            (format nil "~A/default"
+                                    (nilclaw/config:config-default-provider cfg)))))
+    (declare (type string default-model))
+    (multiple-value-bind (provider-name model-name)
+        (nilclaw/config:parse-model-string default-model)
+      (declare (ignore model-name))
+      (multiple-value-bind (provider-runtime found-p)
+          (nilclaw/config:make-provider-runtime-from-config
+           cfg provider-name :model default-model)
+        (declare (ignore found-p))
+        (unless provider-runtime
+          (format *error-output* "[nilclaw] Error: could not create provider runtime for ~A~%"
+                  provider-name)
+          (uiop:quit 1))
+        (nilclaw/provider:enable-dexador-backend)
+        (format t "[nilclaw] Chat session with ~A (type 'quit' to exit)~%" default-model)
+        (finish-output)
+        (let ((history '()))
+          (loop
+            (format t "~&> ")
+            (finish-output)
+            (let ((line (read-line *standard-input* nil nil)))
+              (when (or (null line)
+                        (string-equal (string-trim '(#\Space #\Tab) line) "quit"))
+                (format t "~&[nilclaw] Goodbye.~%")
+                (return))
+              (let ((trimmed (string-trim '(#\Space #\Tab #\Newline #\Return) line)))
+                (when (> (length trimmed) 0)
+                  (multiple-value-bind (response success-p)
+                      (nilclaw/agent:agent-chat trimmed provider-runtime
+                                               :system-prompt system-prompt
+                                               :history history)
+                    (format t "~&~A~%" response)
+                    (finish-output)
+                    ;; Accumulate history for multi-turn
+                    (when success-p
+                      (push `((:role . "user") (:content . ,trimmed)) history)
+                      (push `((:role . "assistant") (:content . ,response)) history)
+                      (setf history (nreverse history)))))))))))))
+
 ;;; CLI entry point
 
 (defun main ()
@@ -95,6 +197,33 @@
     (cond
       ((or (null command) (string= command "start"))
        (start-daemon :config-path (second args)))
+      ((string= command "chat")
+       ;; Parse chat sub-options
+       (let ((config-path nil)
+             (model nil)
+             (system-prompt nil)
+             (interactive nil)
+             (rest-args (rest args)))
+         (loop while rest-args
+               do (let ((arg (pop rest-args)))
+                    (cond
+                      ((string= arg "--config")
+                       (setf config-path (pop rest-args)))
+                      ((string= arg "--model")
+                       (setf model (pop rest-args)))
+                      ((string= arg "--system")
+                       (setf system-prompt (pop rest-args)))
+                      ((string= arg "-i")
+                       (setf interactive t))
+                      ((string= arg "--interactive")
+                       (setf interactive t)))))
+         (if interactive
+             (run-chat-repl :config-path config-path
+                            :model model
+                            :system-prompt system-prompt)
+             (run-chat :config-path config-path
+                       :model model
+                       :system-prompt system-prompt))))
       ((string= command "version")
        (format t "NilClaw 0.1.0~%"))
       ((string= command "check")
@@ -115,11 +244,21 @@
        (format t "NilClaw — Statically typed Common Lisp agent harness~%~%")
        (format t "Usage: nilclaw [command] [options]~%~%")
        (format t "Commands:~%")
-       (format t "  start [config]  Start the daemon (default)~%")
-       (format t "  check [config]  Validate configuration~%")
-       (format t "  migrate         Show migration instructions~%")
-       (format t "  version         Print version~%")
-       (format t "  help            Show this help~%~%")
+       (format t "  start [config]   Start the daemon (default)~%")
+       (format t "  chat [options]   Chat with a provider~%")
+       (format t "  check [config]   Validate configuration~%")
+       (format t "  migrate          Show migration instructions~%")
+       (format t "  version          Print version~%")
+       (format t "  help             Show this help~%~%")
+       (format t "Chat options:~%")
+       (format t "  --config PATH    Configuration file~%")
+       (format t "  --model MODEL    Model to use (provider/model)~%")
+       (format t "  --system TEXT    System prompt~%")
+       (format t "  -i, --interactive  Interactive REPL mode~%~%")
+       (format t "Examples:~%")
+       (format t "  echo 'hello' | nilclaw chat~%")
+       (format t "  nilclaw chat -i~%")
+       (format t "  echo 'hello' | nilclaw chat --model openai/gpt-4o~%~%")
        (format t "Config search path:~%")
        (format t "  ~~/.nilclaw/init.lisp~%")
        (format t "  ~~/.nilclaw/config.lisp~%")

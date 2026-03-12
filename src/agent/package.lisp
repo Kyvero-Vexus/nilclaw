@@ -19,4 +19,7 @@
            #:agent-response-code
            #:agent-response-data
            #:make-agent-response
-           #:agent-handle-request))
+           #:agent-handle-request
+           ;; Agent loop
+           #:agent-chat
+           #:make-chat-transport-fn))

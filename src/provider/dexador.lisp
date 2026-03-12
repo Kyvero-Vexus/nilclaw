@@ -55,12 +55,28 @@
   (unless *dexador-available-p*
     (return-from dexador-backend
       (dexador-backend-stub url method body)))
-  ;; When dexador is actually loaded, this would call it
-  ;; For now, just return stub to avoid compile-time package errors
-  (dexador-backend-stub url method body))
-
-(defvar *current-provider-headers* nil
-  "Dynamic variable for request headers during provider calls.")
+  ;; Call dexador via late binding to avoid compile-time errors
+  (let ((dex-request (find-symbol "REQUEST" :dexador)))
+    (unless dex-request
+      (return-from dexador-backend
+        (dexador-backend-stub url method body)))
+    (handler-case
+        (multiple-value-bind (response-body status response-headers)
+            (funcall (symbol-function dex-request)
+                     url
+                     :method method
+                     :content body
+                     :headers *current-provider-headers*
+                     :want-stream nil
+                     :force-string t)
+          (declare (type fixnum status))
+          (values (if (stringp response-body) response-body nil)
+                  status
+                  response-headers))
+      (error (e)
+        ;; Network error — return 0 status to signal network-fault
+        (declare (ignore e))
+        (values nil 0 nil)))))
 
 (defun enable-dexador-backend ()
   "Enable Dexador as the HTTP backend for provider requests."

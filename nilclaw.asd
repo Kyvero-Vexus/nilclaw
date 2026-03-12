@@ -72,17 +72,17 @@
        (:file "permissions")
        (:file "channels")
        (:file "auto-reply")))
+     (:module "agent"
+      :components
+      ((:file "package")
+       (:file "types")
+       (:file "agent")))
      (:module "gateway"
       :components
       ((:file "package")
        (:file "types")
        (:file "gateway")
        (:file "main")))
-     (:module "agent"
-      :components
-      ((:file "package")
-       (:file "types")
-       (:file "agent")))
      (:module "subagent"
       :components
       ((:file "package")
@@ -115,4 +115,5 @@
      (:file "channel-tests")
      (:file "subagent-tests")
      (:file "auto-reply-tests")
-     (:file "lisp-config-tests")))))
+     (:file "lisp-config-tests")
+     (:file "agent-chat-tests")))))

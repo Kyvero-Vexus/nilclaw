@@ -132,6 +132,7 @@
          (url (or (provider-runtime-base-url runtime) "https://api.openai.com/v1/chat/completions"))
          (body (build-request-body request runtime)))
     (labels ((attempt (n)
+               (setf *current-provider-headers* (build-request-headers runtime))
                (multiple-value-bind (content status headers)
                    (http-backend-request url :post body)
                  (declare (type (or null string) content)
@@ -147,10 +148,9 @@
                        :status status
                        :error-code nil
                        :retry-after-ms nil)))
-                   
                    ;; Rate limited - check Retry-After
                    ((= status 429)
-                    (let ((retry-after (parse-retry-after nil))) ;; TODO: extract from headers
+                    (let ((retry-after (parse-retry-after nil)))
                       (if (< n max-attempts)
                           (progn
                             (sleep (/ (or retry-after (compute-backoff-ms backoff-config n)) 1000.0))
@@ -161,13 +161,11 @@
                            :status status
                            :error-code :rate-limited
                            :retry-after-ms retry-after))))
-                   
                    ;; Transient server errors - retry
                    ((and (member status '(500 502 503 504) :test #'=)
                          (< n max-attempts))
                     (sleep (/ (compute-backoff-ms backoff-config n) 1000.0))
                     (attempt (1+ n)))
-                   
                    ;; Non-retryable error
                    (t
                     (make-http-transport-result

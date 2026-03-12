@@ -75,6 +75,10 @@
   :description "Subagent module tests"
   :in nilclaw-suite)
 
+(def-suite agent-chat-suite
+  :description "Agent chat loop tests"
+  :in nilclaw-suite)
+
 (defun run-nilclaw-tests ()
   "Run all NilClaw tests and return results."
   (run! 'nilclaw-suite))

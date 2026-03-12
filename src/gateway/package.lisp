@@ -110,4 +110,7 @@
            #:start-daemon
            #:main
            #:*running*
-           #:*config*))
+           #:*config*
+           ;; Chat commands
+           #:run-chat
+           #:run-chat-repl))

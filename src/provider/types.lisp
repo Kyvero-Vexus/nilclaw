@@ -5,3 +5,6 @@
   "Valid provider error codes for nilclaw."
   '(member :malformed-payload :auth-failed :not-found :timeout
            :rate-limited :server-error :network-fault :unknown))
+
+(defvar *current-provider-headers* nil
+  "Dynamic variable for request headers during provider calls.")
