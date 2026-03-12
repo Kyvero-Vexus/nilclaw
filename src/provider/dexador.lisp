@@ -60,23 +60,40 @@
     (unless dex-request
       (return-from dexador-backend
         (dexador-backend-stub url method body)))
-    (handler-case
-        (multiple-value-bind (response-body status response-headers)
-            (funcall (symbol-function dex-request)
-                     url
-                     :method method
-                     :content body
-                     :headers *current-provider-headers*
-                     :want-stream nil
-                     :force-string t)
-          (declare (type fixnum status))
-          (values (if (stringp response-body) response-body nil)
-                  status
-                  response-headers))
-      (error (e)
-        ;; Network error — return 0 status to signal network-fault
-        (declare (ignore e))
-        (values nil 0 nil)))))
+    (let ((http-failed-sym (find-symbol "HTTP-REQUEST-FAILED" :dexador))
+          (resp-status-sym (find-symbol "RESPONSE-STATUS" :dexador))
+          (resp-body-sym (find-symbol "RESPONSE-BODY" :dexador))
+          (resp-headers-sym (find-symbol "RESPONSE-HEADERS" :dexador)))
+      (handler-case
+          (multiple-value-bind (response-body status response-headers)
+              (funcall (symbol-function dex-request)
+                       url
+                       :method method
+                       :content body
+                       :headers *current-provider-headers*
+                       :want-stream nil
+                       :force-string t)
+            (declare (type fixnum status))
+            (values (if (stringp response-body) response-body nil)
+                    status
+                    response-headers))
+        (error (e)
+          ;; Check if this is a Dexador HTTP error (4xx/5xx) with status info
+          (if (and http-failed-sym (typep e http-failed-sym))
+              (let ((status (if resp-status-sym
+                               (funcall (symbol-function resp-status-sym) e)
+                               0))
+                    (body (if resp-body-sym
+                             (funcall (symbol-function resp-body-sym) e)
+                             nil))
+                    (headers (if resp-headers-sym
+                                (funcall (symbol-function resp-headers-sym) e)
+                                nil)))
+                (values (if (stringp body) body nil)
+                        (the fixnum (or status 0))
+                        headers))
+              ;; True network error — return 0 status to signal network-fault
+              (values nil 0 nil)))))))
 
 (defun enable-dexador-backend ()
   "Enable Dexador as the HTTP backend for provider requests."

@@ -195,13 +195,21 @@
                          (< n max-attempts))
                     (sleep (/ (compute-backoff-ms backoff-config n) 1000.0))
                     (attempt (1+ n)))
+                   ;; Network fault (status 0 from backend exception)
+                   ((zerop status)
+                    (make-http-transport-result
+                     :success-p nil
+                     :content nil
+                     :status status
+                     :error-code :network-fault
+                     :retry-after-ms nil))
                    ;; Non-retryable error
                    (t
                     (make-http-transport-result
                      :success-p nil
                      :content nil
                      :status status
-                     :error-code (http-status->error-code status)
+                     :error-code (or (http-status->error-code status) :unknown)
                      :retry-after-ms nil))))))
       (attempt 1))))
 
