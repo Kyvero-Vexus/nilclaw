@@ -12,9 +12,9 @@ NilClaw is a clean-room Common Lisp implementation of an AI agent harness with s
 
 ## Quick Links
 
-- [Getting Started](getting-started.html) — Installation and first run
+- [Installation](installation.html) — Install, run, and deploy
+- [Getting Started](getting-started.html) — First steps with NilClaw
 - [Configuration](configuration.html) — Configuration reference
-- [Architecture](architecture.html) — System design overview
 - [API Reference](api-reference.html) — Gateway API documentation
 
 ## Features

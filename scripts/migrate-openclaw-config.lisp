@@ -111,14 +111,30 @@
                  (t (write-char c out))))))
    :keyword))
 
-;;; Convert JSON alist to plist
+;;; Check if something looks like a JSON alist (list of (string . value) pairs)
+(defun alistp (x)
+  (and (listp x)
+       (every (lambda (item)
+                (and (consp item) (stringp (car item))))
+              x)))
 
+;;; Convert JSON alist to plist (recursively handles nested objects and arrays)
 (defun alist-to-plist (alist)
   (loop for (k . v) in alist
         collect (to-lisp-key k)
         collect (cond
-                  ((and (listp v) (consp (car v)) (stringp (caar v)))
+                  ;; Nested object (alist)
+                  ((alistp v)
                    (alist-to-plist v))
+                  ;; Array of objects - map each element
+                  ((and (listp v) (some #'alistp v))
+                   (mapcar (lambda (item)
+                             (if (alistp item)
+                                 (alist-to-plist item)
+                                 item))
+                           v))
+                  ;; Array of other values (strings, numbers, etc.)
+                  ((listp v) v)
                   (t v))))
 
 ;;; Main conversion
@@ -139,8 +155,8 @@
                   (if (floatp v)
                       (format s "~Fd0" v)
                       (format s "~D" v)))
+                 ;; Plist (already converted)
                  ((and (listp v) (keywordp (car v)))
-                  ;; Plist
                   (format s "(")
                   (loop for (k val) on v by #'cddr
                         for first = t then nil
@@ -148,6 +164,10 @@
                            (format s "~S " k)
                            (emit-value val (+ indent 2)))
                   (format s ")"))
+                 ;; Alist (needs conversion) - handle JSON objects inside arrays
+                 ((alistp v)
+                  (emit-value (alist-to-plist v) indent))
+                 ;; Array
                  ((listp v)
                   (format s "(")
                   (loop for item in v
