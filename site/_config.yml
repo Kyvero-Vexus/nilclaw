@@ -19,12 +19,11 @@ aux_links:
 footer_content: 'Copyright &copy; 2026 Kyvero Vexus Corporation. Distributed under AGPL-3.0-or-later.'
 
 # Color scheme
-color_scheme: nilclaw
+color_scheme: dark
 
 # Plugins
 plugins:
   - jekyll-seo-tag
-  - jekyll-github-metadata
 
 # Exclude
 exclude:
