@@ -93,7 +93,8 @@
                (:channels
                 (setf (config-channels cfg) val))
                (:providers
-                (setf (config-providers cfg) (append (config-providers cfg) val)))
+                (setf (config-providers cfg) (append (config-providers cfg)
+                                                      (normalize-providers val))))
                (:agents
                 (setf (config-agents-list cfg) val))
                (:mcp-servers
@@ -120,21 +121,51 @@
           do (setf (getf result key) val))
     result))
 
+;;; Keyword case normalization for provider plists
+
+(declaim (ftype (function (list) list) normalize-provider-plist))
+(defun normalize-provider-plist (plist)
+  "Normalize keyword case in a single provider plist.
+   Converts all keyword symbols to uppercase for consistent lookup.
+   This handles config files with mixed-case keywords."
+  (declare (type list plist))
+  (loop for (key val) on plist by #'cddr
+        when (and key (keywordp key))
+        collect (intern (symbol-name key) (find-package :keyword))
+        and collect val))
+
+(declaim (ftype (function (list) list) normalize-providers))
+(defun normalize-providers (providers-list)
+  "Normalize keyword case in a list of provider plists.
+   Input: ((:name \"foo\" :api-key \"...\") ...)
+   Output: ((:NAME \"foo\" :API-KEY \"...\") ...)"
+  (declare (type list providers-list))
+  (mapcar #'normalize-provider-plist providers-list))
+
 ;;; Nested providers parsing from migrated configs
 
 (declaim (ftype (function (list) list) parse-nested-providers))
 (defun parse-nested-providers (providers-plist)
   "Parse nested providers plist from migrated config.
    Input: (:LMSTUDIO (:BASE-URL \"...\" :API-KEY \"...\" :MODELS (...)) ...)
-   Output: ((:NAME \"lmstudio\" :API-KEY \"...\" :BASE-URL \"...\") ...)"
+   Output: ((:name \"lmstudio\" :api-key \"...\" :base-url \"...\") ...)
+   
+   Handles both uppercase and lowercase keywords in input."
   (declare (type list providers-plist))
-  (loop for (provider-key provider-val) on providers-plist by #'cddr
-        when (and provider-key (keywordp provider-key) provider-val)
-        collect (list :name (string-downcase (symbol-name provider-key))
-                      :api-key (getf provider-val :api-key)
-                      :base-url (getf provider-val :base-url)
-                      :native-tools (let ((v (getf provider-val :native-tools :unset)))
-                                      (if (eq v :unset) t v)))))
+  (flet ((get-case-insensitive (plist key)
+           "Get value from plist using case-insensitive keyword matching."
+           (loop for (k v) on plist by #'cddr
+                 when (and k (keywordp k)
+                           (string= (string-downcase (symbol-name k))
+                                    (string-downcase (symbol-name key))))
+                 return v)))
+    (loop for (provider-key provider-val) on providers-plist by #'cddr
+          when (and provider-key (keywordp provider-key) provider-val)
+          collect (list :name (string-downcase (symbol-name provider-key))
+                        :api-key (get-case-insensitive provider-val :api-key)
+                        :base-url (get-case-insensitive provider-val :base-url)
+                        :native-tools (let ((v (get-case-insensitive provider-val :native-tools)))
+                                        (if (or (null v) (eq v :unset)) t v))))))
 
 ;;; File-based config loading
 
