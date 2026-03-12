@@ -93,7 +93,7 @@
                (:channels
                 (setf (config-channels cfg) val))
                (:providers
-                (setf (config-providers cfg) val))
+                (setf (config-providers cfg) (append (config-providers cfg) val)))
                (:agents
                 (setf (config-agents-list cfg) val))
                (:mcp-servers
@@ -105,7 +105,8 @@
                 (let ((providers-plist (getf val :providers)))
                   (when providers-plist
                     (setf (config-providers cfg)
-                          (parse-nested-providers providers-plist)))))
+                          (append (config-providers cfg)
+                                  (parse-nested-providers providers-plist))))))
                (otherwise
                 (warn "Unknown config key: ~S" key))))
     cfg))
