@@ -130,9 +130,20 @@ The following features are **NOT IMPLEMENTED** - they exist as stubs only:
 | Config Migration | ✅ Working |
 | Config Loading | ✅ Working |
 | Daemon Startup | ✅ Working |
-| Channel Stubs | ⚠️ Stub only |
-| LLM Integration | ❌ Not implemented |
-| Chat Functionality | ❌ Not working |
+| LLM Integration | ✅ Working (fixed 2026-03-12) |
+| Chat Functionality | ✅ Working (fixed 2026-03-12) |
+| Channel Adapters | ⚠️ Stub only |
+
+### Fixes Applied 2026-03-12
+
+1. **Lisp config parser handles nested :MODELS (:PROVIDERS ...)** (nilclaw-kkf)
+   - Added `parse-nested-providers` helper function
+   - Added :MODELS case to `apply-config-plist`
+   - Provider configs now extracted from migrated OpenClaw configs
+
+2. **HTTP transport appends /chat/completions to base-url** (nilclaw-zlq)
+   - Fixed `http-transport-with-backoff` to append endpoint path
+   - Provider base-urls like `http://host:port/v1` now work correctly
 
 ---
 
@@ -149,15 +160,19 @@ nilclaw check
 # Start daemon (WORKS)
 nilclaw start
 
-# Chat with agent (DOES NOT WORK - stub only)
-# There is no REPL/chat interface yet
+# Chat with agent (WORKS - fixed 2026-03-12)
+echo 'hello' | nilclaw chat --model lmstudio/openai/gpt-oss-20b
+
+# Interactive chat REPL (WORKS)
+nilclaw chat -i --model lmstudio/openai/gpt-oss-20b
 ```
 
 ---
 
 ## Next Steps
 
-1. **P0: Implement agent loop** - Wire provider to channels
-2. **P0: Add CLI chat command** - Interactive REPL for testing
-3. **P1: Test with real API keys** - Once integration works
-4. **P2: Channel adapters** - Telegram, web, etc.
+1. ~~**P0: Implement agent loop** - Wire provider to channels~~ ✅ DONE
+2. ~~**P0: Add CLI chat command** - Interactive REPL for testing~~ ✅ DONE
+3. **P1: Test with cloud API keys** - OpenRouter, Anthropic, Gemini (LM Studio tested OK)
+4. **P2: Channel adapters** - Telegram, web (currently stubs)
+5. **P2: Multi-turn chat history** - Verify history accumulation works correctly
