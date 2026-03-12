@@ -242,6 +242,64 @@
                            (nilclaw/config:validation-error-message err)))
                  (uiop:quit 1))
                (format t "Configuration OK~%")))))
+      ((string= command "auth")
+       ;; Parse auth sub-command
+       (let ((sub-command (second args))
+             (rest-args (cddr args)))
+         (cond
+           ((or (null sub-command) (string= sub-command "help"))
+            (format t "NilClaw Auth — OAuth token management~%~%")
+            (format t "Usage: nilclaw auth <command> [options]~%~%")
+            (format t "Commands:~%")
+            (format t "  login    Authenticate with an OAuth provider~%")
+            (format t "  status   Show current auth status~%")
+            (format t "  help     Show this help~%~%")
+            (format t "Login options:~%")
+            (format t "  --provider NAME   Provider to authenticate with (e.g. openai-codex)~%")
+            (format t "  --timeout SECS    Timeout in seconds (default: 300)~%"))
+           ((string= sub-command "login")
+            (let ((provider nil)
+                  (timeout 300))
+              (loop while rest-args
+                    do (let ((arg (pop rest-args)))
+                         (cond
+                           ((string= arg "--provider")
+                            (setf provider (pop rest-args)))
+                           ((string= arg "--timeout")
+                            (let ((val (pop rest-args)))
+                              (when val
+                                (setf timeout (parse-integer val :junk-allowed t))))))))
+              (unless provider
+                (format *error-output* "[nilclaw] Error: --provider is required~%")
+                (format *error-output* "Example: nilclaw auth login --provider openai-codex~%")
+                (uiop:quit 1))
+              ;; Enable HTTP backend for token exchange
+              (nilclaw/provider:enable-dexador-backend)
+              (multiple-value-bind (success-p message)
+                  (nilclaw/auth:run-oauth-login provider :timeout-seconds (or timeout 300))
+                (unless success-p
+                  (format *error-output* "[nilclaw] Error: ~A~%" message)
+                  (uiop:quit 1)))))
+           ((string= sub-command "status")
+            (let* ((path (nilclaw/auth:nilclaw-auth-profiles-path))
+                   (exists (probe-file path)))
+              (if exists
+                  (let* ((data (nilclaw/auth:read-auth-profiles))
+                         (profiles (cdr (assoc :profiles data :test #'eq))))
+                    (format t "Auth profiles: ~A~%" (namestring path))
+                    (if profiles
+                        (dolist (entry profiles)
+                          (when (consp entry)
+                            (let ((pdata (cdr entry)))
+                              (format t "  ~A: provider=~A expires=~A~%"
+                                      (car entry)
+                                      (cdr (assoc :provider pdata :test #'eq))
+                                      (cdr (assoc :expires pdata :test #'eq))))))
+                        (format t "  (no profiles)~%")))
+                  (format t "No auth profiles found at ~A~%" (namestring path)))))
+           (t
+            (format *error-output* "Unknown auth command: ~A~%Use 'nilclaw auth help' for usage.~%" sub-command)
+            (uiop:quit 1)))))
       ((string= command "migrate")
        (format t "Use: sbcl --script scripts/migrate-openclaw-config.lisp~%"))
       ((string= command "help")
@@ -250,6 +308,7 @@
        (format t "Commands:~%")
        (format t "  start [config]   Start the daemon (default)~%")
        (format t "  chat [options]   Chat with a provider~%")
+       (format t "  auth [command]   OAuth token management~%")
        (format t "  check [config]   Validate configuration~%")
        (format t "  migrate          Show migration instructions~%")
        (format t "  version          Print version~%")

@@ -125,10 +125,20 @@
 (declaim (ftype (function (string &optional (or null string)) (or null string))
                 get-oauth-access-token))
 (defun get-oauth-access-token (provider-name &optional agent-dir)
-  "Get OAuth access token for PROVIDER-NAME from OpenClaw auth-profiles.json.
-   Refreshes expired tokens automatically for supported providers."
+  "Get OAuth access token for PROVIDER-NAME.
+   Checks nilclaw's own ~/.nilclaw/auth-profiles.json first,
+   then falls back to OpenClaw's auth-profiles.json for migration."
   (declare (type string provider-name)
            (type (or null string) agent-dir))
+  ;; 1. Try nilclaw's own auth storage first (via nilclaw/auth if loaded)
+  (let ((auth-pkg (find-package :nilclaw/auth)))
+    (when auth-pkg
+      (let ((get-fn (find-symbol "GET-ACCESS-TOKEN" auth-pkg)))
+        (when (and get-fn (fboundp get-fn))
+          (let ((token (funcall (symbol-function get-fn) provider-name agent-dir)))
+            (when token
+              (return-from get-oauth-access-token token)))))))
+  ;; 2. Fall back to OpenClaw's auth-profiles.json (migration path)
   (let ((auth-path (read-openclaw-auth-profiles-path agent-dir)))
     (unless auth-path (return-from get-oauth-access-token nil))
     (let* ((data (parse-json-file auth-path))

@@ -5,7 +5,7 @@
   :version "0.1.0"
   :author "Chrysolambda"
   :license "AGPL-3.0-or-later"
-  :depends-on ("alexandria" "cl-json" "cl-ppcre" "hunchentoot" "uiop")
+  :depends-on ("alexandria" "babel" "cl-json" "cl-ppcre" "hunchentoot" "ironclad" "uiop")
   :serial t
   :components
   ((:module "src"
@@ -77,6 +77,10 @@
       ((:file "package")
        (:file "types")
        (:file "agent")))
+     (:module "auth"
+      :components
+      ((:file "package")
+       (:file "oauth")))
      (:module "gateway"
       :components
       ((:file "package")
@@ -91,7 +95,7 @@
 
 (defsystem "nilclaw/tests"
   :description "NilClaw test suite"
-  :depends-on ("nilclaw" "fiveam" "drakma" "babel")
+  :depends-on ("nilclaw" "fiveam" "drakma" "babel" "ironclad")
   :serial t
   :components
   ((:module "tests"
@@ -118,4 +122,5 @@
      (:file "auto-reply-tests")
      (:file "lisp-config-tests")
      (:file "agent-chat-tests")
-     (:file "gateway-http-tests")))))
+     (:file "gateway-http-tests")
+     (:file "auth-tests")))))
