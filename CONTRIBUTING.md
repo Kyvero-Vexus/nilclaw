@@ -4,123 +4,105 @@ Thank you for your interest in contributing to NilClaw! This document provides g
 
 ## Code of Conduct
 
-- Be respectful and inclusive
-- Focus on constructive feedback
-- Help maintain a welcoming community
+By participating in this project, you agree to maintain a respectful and inclusive environment for all contributors.
+
+## How to Contribute
+
+### Reporting Issues
+
+1. Check if the issue already exists in [GitHub Issues](https://github.com/Kyvero-Vexus/nilclaw/issues)
+2. If not, create a new issue with:
+   - Clear, descriptive title
+   - Steps to reproduce (for bugs)
+   - Expected vs. actual behavior
+   - System information (SBCL version, OS, etc.)
+   - Relevant code examples or error messages
+
+### Submitting Changes
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/your-feature-name`)
+3. Make your changes following our coding standards
+4. Run tests to ensure nothing breaks (`make test`)
+5. Commit your changes (see Commit Guidelines below)
+6. Push to your fork
+7. Open a Pull Request
 
 ## Development Setup
 
 ### Prerequisites
 
-- **SBCL** 2.5.2+ (Steel Bank Common Lisp)
-- **Quicklisp** (Common Lisp package manager)
-- **Git** with GPG signing configured
+- **SBCL** 2.2.0 or newer
+- **Quicklisp** package manager
+- **Git**
+- **Make**
+- **GPG** for signing commits
 
-### Getting Started
+### Initial Setup
 
 ```bash
-# Fork and clone
-git clone https://github.com/YOUR-USERNAME/nilclaw.git
+# Clone your fork
+git clone https://github.com/YOUR_USERNAME/nilclaw.git
 cd nilclaw
 
 # Install dependencies
-sbcl --load ~/quicklisp/setup.lisp \
-     --eval '(ql:quickload (list :alexandria :cl-json :cl-ppcre :fiveam))'
+sbcl --eval '(ql:quickload (list :alexandria :cl-json :cl-ppcre :fiveam))' --quit
+
+# Load the system
+make load
 
 # Run tests
 make test
+
+# Verify traceability
+make traceability
 ```
-
-## Development Workflow
-
-### 1. Create a Branch
-
-```bash
-git checkout -b feature/your-feature-name
-```
-
-### 2. Make Changes
-
-- Follow the coding standards below
-- Add tests for new functionality
-- Ensure all tests pass
-
-### 3. Commit Changes
-
-All commits must:
-- Be GPG-signed (`git commit -S`)
-- Follow conventional commit format
-- Include co-authorship footer
-
-```bash
-git commit -S -m "feat(module): add new feature
-
-Detailed description of the change.
-
-Co-authored-by: htayj <htayj@users.noreply.github.com>"
-```
-
-### 4. Push and Create PR
-
-```bash
-git push origin feature/your-feature-name
-```
-
-Then create a pull request on GitHub.
 
 ## Coding Standards
 
-### Static Typing
+### Type Safety
 
-All code must use SBCL type declarations:
-
-```lisp
-(declaim (optimize (safety 3) (debug 3)))
-
-(declaim (ftype (function (string) (values string &optional))
-                process-input))
-(defun process-input (input)
-  (declare (type string input))
-  ...)
-```
-
-### Structure Definitions
-
-All structure slots must be typed:
+NilClaw enforces **strict type declarations** throughout the codebase. All functions must include complete type information:
 
 ```lisp
-(defstruct my-structure
-  (name "" :type string)
-  (count 0 :type (integer 0 *))
-  (enabled t :type boolean))
+;; Correct: Complete type declaration
+(declaim (ftype (function (string fixnum) (values string &optional))
+                process-message))
+(defun process-message (content timeout)
+  (declare (type string content)
+           (type fixnum timeout))
+  ;; Implementation
+  )
 ```
 
-### Error Handling
+### Code Style
 
-Use Common Lisp conditions:
-
-```lisp
-(define-condition my-error (error)
-  ((detail :reader my-error-detail :initarg :detail)))
-
-(defun risky-operation ()
-  (handler-case
-      (do-something-dangerous)
-    (error (e)
-      (error 'my-error :detail (princ-to-string e)))))
-```
+- Use meaningful names for functions and variables
+- Keep functions focused and small
+- Include comprehensive documentation strings
+- Follow Common Lisp naming conventions
+- Use proper indentation (Emacs + SLIME recommended)
 
 ### Documentation
 
-All public functions must have docstrings:
+Every public function must include a docstring:
 
 ```lisp
-(defun process-message (message)
-  "Process an incoming message and return a response.
-   MESSAGE should be a string.
-   Returns a string response."
-  (declare (type string message))
-  ...)
+(defun public-function (param1 param2)
+  "Brief description of what this function does.
+  
+PARAM1 (string): Description of first parameter
+PARAM2 (integer): Description of second parameter
+
+Returns: Description of return value
+
+Example:
+  (public-function \"hello\" 42)
+  ; => \"result\""
+  (declare (type string param1)
+           (type integer param2))
+  ;; Implementation
+  )
 ```
 
 ## Testing
@@ -128,129 +110,198 @@ All public functions must have docstrings:
 ### Running Tests
 
 ```bash
-# Full test suite
+# Run all tests
 make test
 
-# Load only
-make load
+# Run specific test suite
+sbcl --eval '(ql:quickload :nilclaw/tests)' \
+     --eval '(fiveam:run! :config-suite)' \
+     --quit
 
-# Traceability
+# Verify traceability
 make traceability
 ```
 
 ### Writing Tests
 
-Use FiveAM:
+All new code must include tests:
 
 ```lisp
-(in-package #:nilclaw/tests)
+(in-package :nilclaw/tests)
 
-(def-suite my-feature-suite :in nilclaw-suite)
-(in-suite my-feature-suite)
+(def-suite your-feature-suite
+  :description "Tests for your feature")
 
-(test my-feature-works
-  "Test that my-feature does what it should."
-  (let ((result (my-feature "input")))
-    (is (string= "expected" result))
-    (is (> (length result) 0))))
+(in-suite your-feature-suite)
+
+(test your-feature-basic
+  "Test basic functionality of your feature"
+  (let ((result (your-function "test-data")))
+    (is (not (null result)))
+    (is (typep result 'expected-type))))
 ```
 
 ### Test Coverage
 
-- All new features must have tests
-- All tests must pass (838/838)
-- Traceability must be maintained
+Maintain test coverage at all levels:
+- **L0**: Unit tests for individual functions
+- **L1**: Integration tests for subsystem interaction
+- **L2**: End-to-end behavioral tests
 
-## Commit Standards
+Current metrics: **L0=28 L1=30 L2=24** with 838/838 tests passing
+
+## Commit Guidelines
 
 ### Conventional Commits
-
-Use conventional commit prefixes:
-
-| Prefix | Usage |
-|--------|-------|
-| `feat` | New feature |
-| `fix` | Bug fix |
-| `docs` | Documentation |
-| `test` | Test changes |
-| `refactor` | Code refactoring |
-| `chore` | Maintenance |
-
-### Commit Message Format
-
-```
-<type>(<scope>): <subject>
-
-<body>
-
-<footer>
-```
-
-Example:
-
-```
-feat(channel): add IRC channel adapter
-
-Implement IRC protocol support with TLS and NickServ authentication.
-Includes rate limiting and message queueing.
-
-Closes #123
-
-Co-authored-by: htayj <htayj@users.noreply.github.com>
-```
-
-### Required Footer
-
-All commits must include:
-
-```
-Co-authored-by: htayj <htayj@users.noreply.github.com>
-```
-
-## Pull Request Guidelines
-
-### PR Title
 
 Use conventional commit format:
 
 ```
-feat(channel): add IRC channel adapter
+type(scope): description
+
+[optional body]
+
+Co-authored-by: htayj <htayj@users.noreply.github.com>
 ```
 
-### PR Description
+**Types:**
+- `feat`: New feature
+- `fix`: Bug fix
+- `docs`: Documentation changes
+- `test`: Test changes
+- `refactor`: Code refactoring
+- `style`: Code style changes (formatting, etc.)
+- `perf`: Performance improvements
+- `chore`: Build process or auxiliary tool changes
 
-Include:
-- What changes and why
-- How to test
-- Related issues
-- Checklist
+### GPG Signing
 
-### PR Checklist
+All commits must be **GPG-signed**:
 
-- [ ] All tests pass (`make test`)
+```bash
+# Configure GPG signing (one-time setup)
+git config --global commit.gpgsign true
+git config --global user.signingkey YOUR_KEY_ID
+
+# Commit with signature
+git commit -S -m "feat: add new configuration option
+
+Co-authored-by: htayj <htayj@users.noreply.github.com>"
+```
+
+### Co-authorship
+
+All commits must include the co-authorship line:
+
+```
+Co-authored-by: htayj <htayj@users.noreply.github.com>
+```
+
+## Pull Request Process
+
+### Before Submitting
+
+1. ✅ All tests pass (`make test`)
+2. ✅ Traceability maintained (`make traceability`)
+3. ✅ Code compiles without warnings
+4. ✅ Documentation updated
+5. ✅ Commit messages follow guidelines
+6. ✅ Branch is up-to-date with main
+
+### PR Description Template
+
+```markdown
+## Summary
+- Brief description of changes
+- Why these changes were made
+- Any relevant context
+
+## Type of Change
+- [ ] Bug fix (non-breaking change fixing an issue)
+- [ ] New feature (non-breaking change adding functionality)
+- [ ] Breaking change (fix or feature causing existing functionality to change)
+- [ ] Documentation update
+
+## Testing
+- [ ] Tests pass locally (`make test`)
 - [ ] Traceability maintained (`make traceability`)
-- [ ] Code follows style guide
+- [ ] New tests added for new functionality
+
+## Checklist
+- [ ] Code follows type safety standards
 - [ ] Documentation updated
-- [ ] Commit messages follow standard
-- [ ] Commits are GPG-signed
+- [ ] Commit messages follow guidelines
+- [ ] All commits are GPG-signed
+```
 
-## Code Review
+### Review Process
 
-All PRs require:
-- At least one approval
-- All CI checks passing
-- No unresolved conversations
+1. PRs require at least one approval
+2. All CI checks must pass
+3. Resolve all review comments
+4. Squash commits if requested
+5. Maintainer will merge when ready
+
+## Development Tips
+
+### Interactive Development
+
+Use Emacs + SLIME for the best development experience:
+
+```lisp
+;; In SLIME REPL
+(ql:quickload :nilclaw)
+(asdf:load-system :nilclaw :force t)
+
+;; Test specific functions
+(fiveam:run! 'your-test-name)
+
+;; Debug interactively
+(trace function-name)
+(untrace)
+```
+
+### Debugging
+
+```lisp
+;; Enable debugger
+(setf *debugger-hook* nil)
+
+;; Trace execution
+(trace your-function)
+
+;; Step through code
+(step (your-function args))
+
+;; Inspect variables
+(describe variable)
+(inspect complex-object)
+```
+
+### Performance Profiling
+
+```lisp
+;; Time execution
+(time (your-function args))
+
+;; Profile with sb-profile
+#+sbcl
+(progn
+  (sb-profile:profile your-function)
+  ;; Run your code
+  (sb-profile:report))
+```
+
+## Questions or Problems?
+
+- **Issues**: [GitHub Issues](https://github.com/Kyvero-Vexus/nilclaw/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/Kyvero-Vexus/nilclaw/discussions)
+- **Documentation**: This site and the `docs/` directory
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under AGPL-3.0-or-later.
+By contributing to NilClaw, you agree that your contributions will be licensed under the AGPL-3.0-or-later license.
 
-## Questions?
+---
 
-Open an issue for:
-- Bug reports
-- Feature requests
-- Documentation improvements
-- Questions about contributing
-
-Thank you for contributing to NilClaw!
+Thank you for contributing to NilClaw! Your efforts help make this project better for everyone.

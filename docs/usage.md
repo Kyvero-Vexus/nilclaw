@@ -6,7 +6,7 @@ This page focuses on day-to-day commands, service mode, and troubleshooting.
 
 **Who this page is for**
 
-- Users running NullClaw day to day from the CLI or service mode
+- Users running NilClaw day to day from the CLI or service mode
 - Operators checking health, restarts, and post-change validation steps
 - Troubleshooters narrowing down common startup, model, channel, or gateway issues
 

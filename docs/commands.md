@@ -1,6 +1,6 @@
 # Commands
 
-This page groups the NullClaw CLI by task so you can find the right command quickly without scanning the full help output.
+This page groups the NilClaw CLI by task so you can find the right command quickly without scanning the full help output.
 
 `nullclaw help` gives the top-level summary; this page stays aligned with it and expands into the detailed subcommands and notes.
 
@@ -8,7 +8,7 @@ This page groups the NullClaw CLI by task so you can find the right command quic
 
 **Who this page is for**
 
-- Users who already have NullClaw installed and need the right CLI entry point
+- Users who already have NilClaw installed and need the right CLI entry point
 - Operators checking runtime, service, channel, or diagnostic commands
 - Contributors verifying command names, flags, and task groupings
 

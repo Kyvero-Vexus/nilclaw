@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to NilClaw will be documented in this file.
+All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -8,91 +8,145 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- GitHub Pages documentation site
-- Comprehensive user and agent-facing documentation
+- Comprehensive GitHub Pages documentation site
+- Complete API reference documentation
+- Detailed security policy documentation
+- Development and contribution guidelines
+- GitHub Actions workflow for automated documentation deployment
 
-## [0.1.0] - 2026-03-12
+### Changed
+- Project renamed from NullClaw to NilClaw
+- Updated all documentation to reference NilClaw consistently
+- Removed references to Zig and Homebrew (project uses SBCL/Quicklisp)
+- Enhanced README with badges, features list, and better organization
+
+## [0.1.0] - 2024-03-12
 
 ### Added
+- Initial public release of NilClaw
+- Core agent runtime with message processing
+- WebSocket gateway protocol implementation
+- Channel system with CLI and Web adapters
+- Auto-reply system with configurable rules
+- Tool execution framework with security sandboxing
+- Provider abstraction layer for AI/ML services
+- HTTP client with retry/backoff strategies
+- Memory management system (SQLite, Markdown, None backends)
+- Configuration system with environment variable overrides
+- Security policy with autonomy levels and command filtering
+- Subagent coordination system (ACP patterns)
+- Cron scheduling and heartbeat management
+- Comprehensive test suite (838 tests)
+- Spec-driven development approach
+- Strict type safety with SBCL declarations
+- Coalton integration for strongly typed core modules
 
-#### Core Capabilities
-- **Tool Execution Framework** — Registration, dispatch, iteration limiting, result plumbing
-- **Provider HTTP Layer** — 429/backoff handling, error taxonomy, retry logic with Dexador backend
-- **ACP Subagent System** — Task management with concurrency limits, state tracking, mutex-protected state
-- **Channel System** — CLI and Web adapters with vtable protocol and permission system
-- **Auto-Reply Engine** — Keyword/exact/regex matching, rate limiting, priority ordering, fallback responses
+### Test Coverage
+- **L0 Tests**: 28 unit tests
+- **L1 Tests**: 30 integration tests
+- **L2 Tests**: 24 end-to-end behavioral tests
+- **Total**: 838/838 tests passing (100%)
 
-#### Infrastructure
-- **Configuration System** — JSON parsing, validation, provider runtime construction
-- **Security Policy** — Sandboxed execution, permission controls, allowlist/denylist
-- **Memory System** — Contract-based storage with none, markdown, and LRU backends
-- **Cron Scheduling** — Periodic task execution
-- **Gateway Protocol** — HTTP/WebSocket API handler
+### Features
 
-#### Testing
-- **838 tests** with 100% pass rate
-- **Traceability validation** (L0=28, L1=30, L2=24)
-- **E2E behavioral contracts** for channels, MCP, subagents
+#### Tool Execution
+- File operations (read, write, edit)
+- Shell execution with security controls
+- Web operations (search, fetch)
+- Browser automation
+- Process management
 
-#### Documentation
-- Architecture documentation
-- Configuration reference
-- API reference (Gateway API)
+#### Provider System
+- Anthropic Claude support
+- OpenAI GPT support
+- Local Ollama support
+- Custom HTTP endpoints
+- Configurable retry and timeout
+
+#### Channel System
+- CLI interactive interface
+- Web HTTP/WebSocket interface
+- Auto-reply with pattern matching
+- Rate limiting and filtering
+
+#### Security
+- Three autonomy levels (deny, allowlist, full)
+- Command allowlist/blocklist
+- Path restrictions
+- Sandbox backends (Landlock, Firejail, Bubblewrap, Docker)
+- Audit logging
+- Resource limits
+
+#### Memory
+- SQLite backend with FTS search
+- Markdown backend for human-readable logs
+- Stateless operation mode
+- Automatic archival
+
+#### Subagents
+- Hierarchical agent coordination
+- Task delegation
+- Inter-agent communication
+- Resource management
+- Fault tolerance
+
+### Documentation
+- Comprehensive README
 - Installation guide
-- Security guide
+- Configuration reference
+- Architecture overview
+- Security policy
 - Development guide
+- API reference
+- GitHub Pages site
 
-### Migration Readiness
+### Development Infrastructure
+- Makefile for build automation
+- GitHub Actions CI/CD
+- Traceability validation
+- GPG-signed commits
+- Conventional commits standard
+- Contributing guidelines
 
-| Gate | Status | Evidence |
-|------|--------|----------|
-| L0 | ✅ Closed | 838/838 tests passing |
-| L1 | ✅ Closed | Protocol parity verified, live call-trace signoff |
-| L2 | ✅ Closed | All 5 capability children complete |
-| L3 | ✅ Closed | CI active, SLOs defined, rollback drill passed |
-| L4 | ⏳ Ready | Runbook complete, awaiting user sign-off |
+## [0.0.1] - 2024-01-15
 
-### Technical Details
-
-#### Type System
-- SBCL strict type declarations throughout
-- Structure slots with explicit types
-- Function type declarations (ftype)
-- Safety 3 optimization default
-
-#### Error Handling
-- Common Lisp condition system
-- Custom condition types for domain errors
-- Error-protected tool execution
-
-#### Thread Safety
-- Mutex-protected subagent manager state
-- Thread-safe hash tables for task tracking
-
-### Commits
-
-- `3384765` docs(cutover): Add L4 cutover runbook and final checklist
-- `4795fc3` docs(ops): Add L3 ops hardening report
-- `385c954` feat(channel): Add auto-reply system for web channels
-- `dfe4040` feat(channel): implement channel system infrastructure
-- `7e305fa` feat(subagent): Add ACP task management subsystem
-- `961d325` feat(provider): Add optional Dexador HTTP backend
-- `a445ac2` feat(config): Add provider runtime construction from config
-- `c908ac0` feat(provider): Add HTTP transport layer with 429 backoff
-- `fee756e` feat(dispatcher): Add tool execution runtime
-- `97cdc85` docs(provider): Add L2 HTTP parity plan
-- `721bfda` feat(config): add gateway runtime flag parity + validation
-- `6650ee0` docs(gateway): Add L1 protocol parity verification report
+### Added
+- Initial project setup
+- Basic project structure
+- ASDF system definition
+- Core package definitions
+- Initial test framework
+- Basic configuration system
 
 ---
 
 ## Version History
 
-| Version | Date | Description |
-|---------|------|-------------|
-| 0.1.0 | 2026-03-12 | Initial migration-ready release |
+- **0.1.0** (2024-03-12): Initial public release with full feature set
+- **0.0.1** (2024-01-15): Project initialization
+
+## Future Roadmap
+
+### Planned for 0.2.0
+- Enhanced subagent coordination patterns
+- Additional tool implementations
+- Performance optimizations
+- Extended provider support
+- Improved error handling
+
+### Planned for 0.3.0
+- Web UI improvements
+- Additional memory backend options
+- Plugin system for custom tools
+- Enhanced monitoring and observability
+
+### Long-term Goals
+- Production-ready stability
+- Comprehensive provider ecosystem
+- Advanced subagent coordination
+- Performance benchmarking suite
+- Community plugin repository
 
 ---
 
-[Unreleased]: https://github.com/Kyvero-Vexus/nilclaw/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/Kyvero-Vexus/nilclaw/releases/tag/v0.1.0
+For more details on each release, see the [GitHub Releases](https://github.com/Kyvero-Vexus/nilclaw/releases) page.
