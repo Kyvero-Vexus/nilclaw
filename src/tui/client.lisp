@@ -46,6 +46,60 @@
 (deftype reasoning-mode ()
   '(member :off :on :stream))
 
+(deftype activation-mode ()
+  '(member :off :on))
+
+;;; ====================================================================
+;;; Streaming display state (Phase 2)
+;;; ====================================================================
+
+(defstruct tui-streaming-state
+  "Tracks incremental streaming display state for assistant responses."
+  (buffer "" :type string)
+  (chunks-received 0 :type (integer 0 *))
+  (started-at 0 :type integer)
+  (finished-p nil :type boolean))
+
+(declaim (ftype (function (tui-streaming-state string) tui-streaming-state)
+                tui-streaming-append))
+(defun tui-streaming-append (state chunk)
+  "Append a streaming chunk to the buffer. Returns the updated state."
+  (declare (type tui-streaming-state state)
+           (type string chunk))
+  (setf (tui-streaming-state-buffer state)
+        (concatenate 'string (tui-streaming-state-buffer state) chunk))
+  (incf (tui-streaming-state-chunks-received state))
+  state)
+
+(declaim (ftype (function (tui-streaming-state) tui-streaming-state)
+                tui-streaming-finish))
+(defun tui-streaming-finish (state)
+  "Mark the streaming state as finished. Returns the updated state."
+  (declare (type tui-streaming-state state))
+  (setf (tui-streaming-state-finished-p state) t)
+  state)
+
+(declaim (ftype (function (tui-streaming-state) (integer 0 *))
+                tui-streaming-elapsed-ms))
+(defun tui-streaming-elapsed-ms (state)
+  "Return elapsed milliseconds since streaming started (approximate)."
+  (declare (type tui-streaming-state state))
+  (let ((started (tui-streaming-state-started-at state)))
+    (if (zerop started)
+        0
+        (* 1000 (- (get-universal-time) started)))))
+
+;;; ====================================================================
+;;; Token usage tracking (Phase 2)
+;;; ====================================================================
+
+(defstruct token-usage
+  "Tracks token usage for the current session."
+  (prompt-tokens 0 :type (integer 0 *))
+  (completion-tokens 0 :type (integer 0 *))
+  (total-tokens 0 :type (integer 0 *))
+  (request-count 0 :type (integer 0 *)))
+
 ;;; ====================================================================
 ;;; Local TUI client (in-process, no network — for testing & embedding)
 ;;; ====================================================================
@@ -64,7 +118,13 @@ No network required — ideal for tests and embedded use."
   (deliver-p nil :type boolean)
   (think-level :off :type keyword)
   (verbose-mode :off :type keyword)
-  (reasoning-mode :off :type keyword))
+  (reasoning-mode :off :type keyword)
+  ;; Phase 2 parity: extended state
+  (elevated-p nil :type boolean)
+  (activation-mode :off :type keyword)
+  (shell-allowed-p nil :type boolean)       ; session-scoped ! shell gate
+  (token-usage nil :type (or null token-usage))
+  (streaming nil :type (or null tui-streaming-state)))
 
 (declaim (ftype (function (nilclaw/gateway:gateway-runtime &key (:session-key string))
                           local-tui-client)
@@ -73,7 +133,9 @@ No network required — ideal for tests and embedded use."
   "Create a local TUI client backed by RUNTIME."
   (declare (type nilclaw/gateway:gateway-runtime runtime)
            (type string session-key))
-  (%make-local-tui-client :runtime runtime :session-key session-key))
+  (%make-local-tui-client :runtime runtime
+                          :session-key session-key
+                          :token-usage (make-token-usage)))
 
 ;;; --- Local connect ---
 
@@ -123,6 +185,7 @@ Performs challenge → connect handshake in-process."
     (return-from local-tui-send (values nil nil)))
   (let* ((runtime (local-tui-client-runtime client))
          (session-key (local-tui-client-session-key client))
+         (usage (local-tui-client-token-usage client))
          (response (nilclaw/gateway:gateway-handle-request
                     (nilclaw/gateway:make-gateway-request
                      :id (format nil "tui-msg-~A" (get-universal-time))
@@ -130,6 +193,13 @@ Performs challenge → connect handshake in-process."
                      :params (list :session-key session-key
                                    :message message))
                     runtime)))
+    ;; Update token usage estimates (gateway doesn't provide real counts yet,
+    ;; so we estimate based on message length)
+    (when usage
+      (let ((prompt-est (ceiling (length message) 4))
+            (completion-est 0))
+        (incf (token-usage-prompt-tokens usage) prompt-est)
+        (incf (token-usage-request-count usage))))
     (if (nilclaw/gateway:gateway-response-ok-p response)
         ;; Extract the assistant response from the event log
         (let* ((events (nilclaw/gateway:gateway-runtime-event-log runtime))
@@ -149,6 +219,13 @@ Performs challenge → connect handshake in-process."
                      (content-parts (getf msg :content))
                      (text (when (and content-parts (listp content-parts))
                              (getf (first content-parts) :text))))
+                ;; Update completion token estimate
+                (when (and usage text)
+                  (let ((comp-est (ceiling (length text) 4)))
+                    (incf (token-usage-completion-tokens usage) comp-est)
+                    (setf (token-usage-total-tokens usage)
+                          (+ (token-usage-prompt-tokens usage)
+                             (token-usage-completion-tokens usage)))))
                 (values (or text "") t))
               (values nil t)))
         (values nil nil))))
@@ -176,7 +253,67 @@ Performs challenge → connect handshake in-process."
       (getf (nilclaw/gateway:gateway-response-result response) :messages))))
 
 ;;; ====================================================================
-;;; Display helpers (Phase 1 parity)
+;;; Shell command execution (Phase 2) — session-scoped allow/deny gate
+;;; ====================================================================
+
+(declaim (ftype (function (local-tui-client string &key (:input-fn (or null function))
+                                                         (:output-fn (or null function)))
+                          (values string boolean))
+                tui-handle-shell-command))
+(defun tui-handle-shell-command (client command &key input-fn output-fn)
+  "Handle a ! shell command. Checks session-scoped permission gate.
+INPUT-FN: (lambda (prompt) → string) for interactive input (defaults to read-line).
+OUTPUT-FN: (lambda (text) → nil) for output display (defaults to format *standard-output*).
+Returns (values output-text success-p)."
+  (declare (type local-tui-client client)
+           (type string command))
+  (let ((ask-input (or input-fn
+                       (lambda (prompt)
+                         (format *query-io* "~A" prompt)
+                         (finish-output *query-io*)
+                         (read-line *query-io* nil ""))))
+        (show-output (or output-fn
+                         (lambda (text)
+                           (format *standard-output* "~A" text)
+                           (finish-output *standard-output*)))))
+    (declare (ignorable show-output))
+    ;; Check if shell is allowed for this session
+    (unless (local-tui-client-shell-allowed-p client)
+      ;; Prompt user for permission
+      (let ((answer (funcall ask-input
+                             "[shell] Shell execution is disabled. Allow for this session? (y/n): ")))
+        (cond
+          ((member (string-trim '(#\Space #\Tab) answer)
+                   '("y" "yes" "Y" "YES") :test #'string=)
+           (setf (local-tui-client-shell-allowed-p client) t))
+          (t
+           (return-from tui-handle-shell-command
+             (values "[shell] Denied. Use /settings to enable shell access." nil))))))
+    ;; Execute command
+    (handler-case
+        (let ((trimmed (string-trim '(#\Space #\Tab) command)))
+          (when (zerop (length trimmed))
+            (return-from tui-handle-shell-command
+              (values "[shell] Empty command." nil)))
+          (multiple-value-bind (output error-output exit-code)
+              (uiop:run-program trimmed
+                                :output :string
+                                :error-output :string
+                                :ignore-error-status t)
+            (let ((combined (with-output-to-string (s)
+                              (when (and output (> (length output) 0))
+                                (write-string output s))
+                              (when (and error-output (> (length error-output) 0))
+                                (when (and output (> (length output) 0))
+                                  (terpri s))
+                                (write-string error-output s))
+                              (format s "~&[exit ~D]" exit-code))))
+              (values combined (zerop exit-code)))))
+      (error (e)
+        (values (format nil "[shell] Error: ~A" e) nil)))))
+
+;;; ====================================================================
+;;; Display helpers (Phase 1 + Phase 2 parity)
 ;;; ====================================================================
 
 (declaim (ftype (function (integer) string) format-timestamp))
@@ -204,8 +341,17 @@ MESSAGE is a plist with :role, :content, :timestamp."
 (defun tui-format-status (client)
   "Format the /status output for the TUI client."
   (declare (type local-tui-client client))
-  (format nil "~&[status]~%  connected: ~A~%  session:   ~A~%  agent:     ~A~%  model:     ~A~%  deliver:   ~A~%  think:     ~A~%  verbose:   ~A~%  reasoning: ~A"
-          (if (local-tui-client-connected-p client) "yes" "no")
+  (format nil "~&[status]~%  connected:  yes~\
+               ~%  session:    ~A~\
+               ~%  agent:      ~A~\
+               ~%  model:      ~A~\
+               ~%  deliver:    ~A~\
+               ~%  think:      ~A~\
+               ~%  verbose:    ~A~\
+               ~%  reasoning:  ~A~\
+               ~%  elevated:   ~A~\
+               ~%  activation: ~A~\
+               ~%  shell:      ~A"
           (local-tui-client-session-key client)
           (local-tui-client-agent-id client)
           (let ((m (local-tui-client-model-id client)))
@@ -213,7 +359,10 @@ MESSAGE is a plist with :role, :content, :timestamp."
           (if (local-tui-client-deliver-p client) "on" "off")
           (string-downcase (symbol-name (local-tui-client-think-level client)))
           (string-downcase (symbol-name (local-tui-client-verbose-mode client)))
-          (string-downcase (symbol-name (local-tui-client-reasoning-mode client)))))
+          (string-downcase (symbol-name (local-tui-client-reasoning-mode client)))
+          (if (local-tui-client-elevated-p client) "on" "off")
+          (string-downcase (symbol-name (local-tui-client-activation-mode client)))
+          (if (local-tui-client-shell-allowed-p client) "allowed" "denied")))
 
 (declaim (ftype (function (local-tui-client) string) tui-format-footer))
 (defun tui-format-footer (client)
@@ -227,9 +376,13 @@ MESSAGE is a plist with :role, :content, :timestamp."
         (deliver (if (local-tui-client-deliver-p client) "on" "off"))
         (think (string-downcase (symbol-name (local-tui-client-think-level client))))
         (verbose (string-downcase (symbol-name (local-tui-client-verbose-mode client))))
-        (reasoning (string-downcase (symbol-name (local-tui-client-reasoning-mode client)))))
-    (format nil "[~A] agent:~A session:~A model:~A deliver:~A think:~A verbose:~A reasoning:~A"
-            conn agent session model deliver think verbose reasoning)))
+        (reasoning (string-downcase (symbol-name (local-tui-client-reasoning-mode client))))
+        (usage (local-tui-client-token-usage client)))
+    (format nil "[~A] agent:~A session:~A model:~A deliver:~A think:~A verbose:~A reasoning:~A~A"
+            conn agent session model deliver think verbose reasoning
+            (if (and usage (> (token-usage-total-tokens usage) 0))
+                (format nil " tokens:~D" (token-usage-total-tokens usage))
+                ""))))
 
 (declaim (ftype (function () string) tui-format-help))
 (defun tui-format-help ()
@@ -238,21 +391,151 @@ MESSAGE is a plist with :role, :content, :timestamp."
   /help                    Show this help~%~
   /status                  Show connection & session status~%~
   /sessions                List sessions~%~
-  /session <key>           Switch to session~%~
+  /session [key]           Switch/pick session~%~
   /agents                  List agents~%~
   /agent <id>              Switch agent~%~
   /models                  List models~%~
-  /model <provider/model>  Set model~%~
+  /model [provider/model]  Set/pick model~%~
   /new, /reset             Reset current session~%~
   /deliver <on|off>        Toggle delivery~%~
   /think <off|minimal|low|medium|high>  Set thinking level~%~
   /verbose <on|full|off>   Set verbose mode~%~
   /reasoning <on|off|stream>  Set reasoning mode~%~
+  /context                 Show context info~%~
+  /usage                   Show token usage~%~
+  /elevated <on|off>       Toggle elevated mode~%~
+  /activation <on|off>     Toggle activation mode~%~
+  /settings                Show all settings~%~
   /abort                   Abort active run~%~
-  /exit                    Exit TUI"))
+  /exit                    Exit TUI~%~
+  !<command>               Execute shell command"))
 
 ;;; ====================================================================
-;;; Slash command dispatch (Phase 1 parity)
+;;; Phase 2 display helpers
+;;; ====================================================================
+
+(declaim (ftype (function (local-tui-client) string) tui-format-context))
+(defun tui-format-context (client)
+  "Format /context output showing session context info."
+  (declare (type local-tui-client client))
+  (let* ((runtime (local-tui-client-runtime client))
+         (session-key (local-tui-client-session-key client))
+         (sessions (nilclaw/gateway:gateway-runtime-sessions runtime))
+         (session (find session-key sessions
+                        :key #'nilclaw/gateway:gateway-session-key :test #'string=))
+         (msg-count (if session
+                        (length (nilclaw/gateway:gateway-session-messages session))
+                        0)))
+    (format nil "~&[context]~\
+                 ~%  session:  ~A~\
+                 ~%  agent:    ~A~\
+                 ~%  model:    ~A~\
+                 ~%  messages: ~D~\
+                 ~%  elevated: ~A~\
+                 ~%  shell:    ~A"
+            session-key
+            (local-tui-client-agent-id client)
+            (let ((m (local-tui-client-model-id client)))
+              (if (string= m "") "(default)" m))
+            msg-count
+            (if (local-tui-client-elevated-p client) "on" "off")
+            (if (local-tui-client-shell-allowed-p client) "allowed" "denied"))))
+
+(declaim (ftype (function (local-tui-client) string) tui-format-usage))
+(defun tui-format-usage (client)
+  "Format /usage output showing token usage statistics."
+  (declare (type local-tui-client client))
+  (let ((usage (local-tui-client-token-usage client)))
+    (if (and usage (> (token-usage-request-count usage) 0))
+        (format nil "~&[usage]~\
+                     ~%  prompt tokens:     ~D~\
+                     ~%  completion tokens: ~D~\
+                     ~%  total tokens:      ~D~\
+                     ~%  requests:          ~D"
+                (token-usage-prompt-tokens usage)
+                (token-usage-completion-tokens usage)
+                (token-usage-total-tokens usage)
+                (token-usage-request-count usage))
+        "[usage] No usage data yet.")))
+
+(declaim (ftype (function (local-tui-client) string) tui-format-settings))
+(defun tui-format-settings (client)
+  "Format /settings output showing all current settings."
+  (declare (type local-tui-client client))
+  (format nil "~&[settings]~\
+               ~%  Session:    ~A~\
+               ~%  Agent:      ~A~\
+               ~%  Model:      ~A~\
+               ~%  Deliver:    ~A~\
+               ~%  Think:      ~A~\
+               ~%  Verbose:    ~A~\
+               ~%  Reasoning:  ~A~\
+               ~%  Elevated:   ~A~\
+               ~%  Activation: ~A~\
+               ~%  Shell:      ~A"
+          (local-tui-client-session-key client)
+          (local-tui-client-agent-id client)
+          (let ((m (local-tui-client-model-id client)))
+            (if (string= m "") "(default)" m))
+          (if (local-tui-client-deliver-p client) "on" "off")
+          (string-downcase (symbol-name (local-tui-client-think-level client)))
+          (string-downcase (symbol-name (local-tui-client-verbose-mode client)))
+          (string-downcase (symbol-name (local-tui-client-reasoning-mode client)))
+          (if (local-tui-client-elevated-p client) "on" "off")
+          (string-downcase (symbol-name (local-tui-client-activation-mode client)))
+          (if (local-tui-client-shell-allowed-p client) "allowed" "denied")))
+
+;;; ====================================================================
+;;; Picker helper — textual numbered-list selector (Phase 2)
+;;; ====================================================================
+
+(declaim (ftype (function (list string &key (:input-fn (or null function))
+                                            (:display-fn (or null function)))
+                          (values (or null string) boolean))
+                tui-pick-from-list))
+(defun tui-pick-from-list (items prompt &key input-fn display-fn)
+  "Present a numbered list of ITEMS and let the user pick one.
+INPUT-FN: (lambda (prompt) → string) — defaults to read-line from *query-io*.
+DISPLAY-FN: (lambda (index item) → string) — format each item for display.
+Returns (values chosen-item success-p)."
+  (declare (type list items)
+           (type string prompt))
+  (when (null items)
+    (return-from tui-pick-from-list (values nil nil)))
+  (let ((ask-input (or input-fn
+                       (lambda (p)
+                         (format *query-io* "~A" p)
+                         (finish-output *query-io*)
+                         (read-line *query-io* nil ""))))
+        (fmt-item (or display-fn
+                      (lambda (idx item)
+                        (format nil "  ~D) ~A" idx item)))))
+    ;; Build display
+    (let ((display (with-output-to-string (s)
+                     (format s "~A~%" prompt)
+                     (loop for item in items
+                           for i from 1
+                           do (format s "~A~%" (funcall fmt-item i item))))))
+      ;; Show options and ask
+      (funcall ask-input display)  ; display first (ask-input prints prompt)
+      (let* ((answer (funcall ask-input
+                              (format nil "  Pick [1-~D] or name: " (length items))))
+             (trimmed (string-trim '(#\Space #\Tab) answer)))
+        ;; Try numeric selection
+        (let ((num (ignore-errors (parse-integer trimmed))))
+          (cond
+            ((and num (>= num 1) (<= num (length items)))
+             (values (nth (1- num) items) t))
+            ;; Try name match
+            ((> (length trimmed) 0)
+             (let ((match (find trimmed items :test #'string-equal)))
+               (if match
+                   (values match t)
+                   (values nil nil))))
+            (t (values nil nil))))))))
+
+;;; ====================================================================
+;;; Slash command parsing
 ;;; ====================================================================
 
 (declaim (ftype (function (string) (values string string)) parse-slash-command))
@@ -267,11 +550,17 @@ E.g. '/agent foo' → (values \"agent\" \"foo\"), '/help' → (values \"help\" \
                 (string-trim '(#\Space #\Tab) (subseq trimmed (1+ space-pos))))
         (values trimmed ""))))
 
-(declaim (ftype (function (local-tui-client string) (values string keyword))
+;;; ====================================================================
+;;; Slash command dispatch (Phase 1 + Phase 2 parity)
+;;; ====================================================================
+
+(declaim (ftype (function (local-tui-client string &key (:input-fn (or null function)))
+                          (values string keyword))
                 tui-handle-slash-command))
-(defun tui-handle-slash-command (client input)
+(defun tui-handle-slash-command (client input &key input-fn)
   "Handle a slash command for the local TUI client.
-Returns (values output-text action) where action is :continue, :exit, or :reset."
+Returns (values output-text action) where action is :continue, :exit, or :reset.
+INPUT-FN: optional (lambda (prompt) → string) for interactive picker input."
   (declare (type local-tui-client client)
            (type string input))
   (multiple-value-bind (cmd arg) (parse-slash-command input)
@@ -307,12 +596,41 @@ Returns (values output-text action) where action is :continue, :exit, or :reset.
                      (values "[sessions] (none)" :continue)))
                (values "[error] Failed to list sessions" :continue))))
 
-        ;; /session <key>
+        ;; /session [key] — picker when no arg
         ((string= cmd-down "session")
          (if (string= arg "")
-             (values "[error] Usage: /session <key>" :continue)
+             ;; Picker mode: list sessions and let user pick
+             (let* ((runtime (local-tui-client-runtime client))
+                    (response (nilclaw/gateway:gateway-handle-request
+                               (nilclaw/gateway:make-gateway-request
+                                :id "tui-session-pick"
+                                :method "sessions.list"
+                                :params (list :limit 50))
+                               runtime)))
+               (if (nilclaw/gateway:gateway-response-ok-p response)
+                   (let* ((sessions (getf (nilclaw/gateway:gateway-response-result response) :sessions))
+                          (keys (mapcar (lambda (s) (getf s :key)) sessions)))
+                     (if (null keys)
+                         (values "[session] No sessions available." :continue)
+                         (multiple-value-bind (chosen success-p)
+                             (tui-pick-from-list
+                              keys "[session] Pick a session:"
+                              :input-fn input-fn
+                              :display-fn (lambda (idx item)
+                                            (let ((sess (nth (1- idx) sessions)))
+                                              (format nil "  ~D) ~A  (agent: ~A)"
+                                                      idx item
+                                                      (or (getf sess :agent-id) "-")))))
+                           (if success-p
+                               (progn
+                                 (nilclaw/gateway:gateway-ensure-session
+                                  runtime chosen chosen (local-tui-client-agent-id client))
+                                 (setf (local-tui-client-session-key client) chosen)
+                                 (values (format nil "[session] Switched to: ~A" chosen) :continue))
+                               (values "[session] Cancelled." :continue)))))
+                   (values "[error] Failed to list sessions" :continue)))
+             ;; Direct key mode
              (let ((runtime (local-tui-client-runtime client)))
-               ;; Ensure session exists and switch to it
                (nilclaw/gateway:gateway-ensure-session
                 runtime arg arg (local-tui-client-agent-id client))
                (setf (local-tui-client-session-key client) arg)
@@ -370,10 +688,38 @@ Returns (values output-text action) where action is :continue, :exit, or :reset.
                      (values "[models] (none registered)" :continue)))
                (values "[error] Failed to list models" :continue))))
 
-        ;; /model <id>
+        ;; /model [id] — picker when no arg
         ((string= cmd-down "model")
          (if (string= arg "")
-             (values "[error] Usage: /model <provider/model>" :continue)
+             ;; Picker mode: list models and let user pick
+             (let* ((runtime (local-tui-client-runtime client))
+                    (response (nilclaw/gateway:gateway-handle-request
+                               (nilclaw/gateway:make-gateway-request
+                                :id "tui-model-pick"
+                                :method "models.list"
+                                :params nil)
+                               runtime)))
+               (if (nilclaw/gateway:gateway-response-ok-p response)
+                   (let* ((models (getf (nilclaw/gateway:gateway-response-result response) :models))
+                          (ids (mapcar (lambda (m) (getf m :id)) models)))
+                     (if (null ids)
+                         (values "[model] No models available." :continue)
+                         (multiple-value-bind (chosen success-p)
+                             (tui-pick-from-list
+                              ids "[model] Pick a model:"
+                              :input-fn input-fn
+                              :display-fn (lambda (idx item)
+                                            (let ((model (nth (1- idx) models)))
+                                              (format nil "  ~D) ~A  (~A)"
+                                                      idx item
+                                                      (or (getf model :provider) "-")))))
+                           (if success-p
+                               (progn
+                                 (setf (local-tui-client-model-id client) chosen)
+                                 (values (format nil "[model] Set to: ~A" chosen) :continue))
+                               (values "[model] Cancelled." :continue)))))
+                   (values "[error] Failed to list models" :continue)))
+             ;; Direct id mode
              (progn
                (setf (local-tui-client-model-id client) arg)
                (values (format nil "[model] Set to: ~A" arg) :continue))))
@@ -387,6 +733,8 @@ Returns (values output-text action) where action is :continue, :exit, or :reset.
            (nilclaw/gateway:gateway-ensure-session
             runtime new-key "New Session" (local-tui-client-agent-id client))
            (setf (local-tui-client-session-key client) new-key)
+           ;; Reset token usage on new session
+           (setf (local-tui-client-token-usage client) (make-token-usage))
            (values (format nil "[reset] New session: ~A" new-key) :reset)))
 
         ;; /deliver <on|off>
@@ -444,6 +792,42 @@ Returns (values output-text action) where action is :continue, :exit, or :reset.
                  (values (format nil "[reasoning] ~A" (string-downcase (symbol-name mode)))
                          :continue))
                (values "[error] Usage: /reasoning <on|off|stream>" :continue))))
+
+        ;; /context (Phase 2)
+        ((string= cmd-down "context")
+         (values (tui-format-context client) :continue))
+
+        ;; /usage (Phase 2)
+        ((string= cmd-down "usage")
+         (values (tui-format-usage client) :continue))
+
+        ;; /elevated <on|off> (Phase 2)
+        ((string= cmd-down "elevated")
+         (cond
+           ((string-equal arg "on")
+            (setf (local-tui-client-elevated-p client) t)
+            (values "[elevated] on" :continue))
+           ((string-equal arg "off")
+            (setf (local-tui-client-elevated-p client) nil)
+            (values "[elevated] off" :continue))
+           (t
+            (values "[error] Usage: /elevated <on|off>" :continue))))
+
+        ;; /activation <on|off> (Phase 2)
+        ((string= cmd-down "activation")
+         (cond
+           ((string-equal arg "on")
+            (setf (local-tui-client-activation-mode client) :on)
+            (values "[activation] on" :continue))
+           ((string-equal arg "off")
+            (setf (local-tui-client-activation-mode client) :off)
+            (values "[activation] off" :continue))
+           (t
+            (values "[error] Usage: /activation <on|off>" :continue))))
+
+        ;; /settings (Phase 2)
+        ((string= cmd-down "settings")
+         (values (tui-format-settings client) :continue))
 
         ;; /abort
         ((string= cmd-down "abort")
@@ -510,21 +894,30 @@ Connects to a running gateway and provides a terminal chat interface."
           (return))
         (let ((trimmed (string-trim '(#\Space #\Tab #\Newline #\Return) line)))
           (when (> (length trimmed) 0)
-            (if (char= (char trimmed 0) #\/)
-                ;; Slash command
-                (multiple-value-bind (output action)
-                    (tui-handle-slash-command client trimmed)
-                  (format t "~&~A~%" output)
-                  (when (eq action :exit)
-                    (return)))
-                ;; Regular message
-                (multiple-value-bind (response success-p)
-                    (local-tui-send client trimmed)
-                  (if success-p
-                      (format t "~&~A assistant> ~A~%"
-                              (format-timestamp (get-universal-time))
-                              (or response "(no response)"))
-                      (format t "~&[error] Failed to send message~%"))))
+            (cond
+              ;; Slash command
+              ((char= (char trimmed 0) #\/)
+               (multiple-value-bind (output action)
+                   (tui-handle-slash-command client trimmed)
+                 (format t "~&~A~%" output)
+                 (when (eq action :exit)
+                   (return))))
+              ;; Shell command (! prefix)
+              ((char= (char trimmed 0) #\!)
+               (let ((shell-cmd (subseq trimmed 1)))
+                 (multiple-value-bind (output success-p)
+                     (tui-handle-shell-command client shell-cmd)
+                   (declare (ignore success-p))
+                   (format t "~&~A~%" output))))
+              ;; Regular message
+              (t
+               (multiple-value-bind (response success-p)
+                   (local-tui-send client trimmed)
+                 (if success-p
+                     (format t "~&~A assistant> ~A~%"
+                             (format-timestamp (get-universal-time))
+                             (or response "(no response)"))
+                     (format t "~&[error] Failed to send message~%")))))
             ;; Footer after each interaction
             (format t "~A~%" (tui-format-footer client))
             (finish-output)))))))

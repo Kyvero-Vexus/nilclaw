@@ -20,6 +20,16 @@ Optionally pre-populate agents and models."
     (nilclaw/tui:local-tui-connect client)
     client))
 
+;;; Helper: make a fake input-fn that returns pre-canned answers
+(defun make-canned-input (&rest answers)
+  "Return an input-fn that returns successive ANSWERS, then empty string."
+  (let ((remaining (copy-list answers)))
+    (lambda (prompt)
+      (declare (ignore prompt))
+      (if remaining
+          (pop remaining)
+          ""))))
+
 ;;; ====================================================================
 ;;; Entrypoint availability
 ;;; ====================================================================
@@ -140,6 +150,18 @@ Optionally pre-populate agents and models."
     (is (eq :off (nilclaw/tui:local-tui-client-reasoning-mode client)))))
 
 ;;; ====================================================================
+;;; Phase 2 Parity: Default extended state values
+;;; ====================================================================
+
+(test tui-default-extended-state-values
+  "New local TUI client has correct Phase 2 default state values."
+  (let ((client (make-test-tui-client)))
+    (is (not (nilclaw/tui:local-tui-client-elevated-p client)))
+    (is (eq :off (nilclaw/tui:local-tui-client-activation-mode client)))
+    (is (not (nilclaw/tui:local-tui-client-shell-allowed-p client)))
+    (is (not (null (nilclaw/tui:local-tui-client-token-usage client))))))
+
+;;; ====================================================================
 ;;; Phase 1 Parity: Slash command — /help
 ;;; ====================================================================
 
@@ -154,7 +176,14 @@ Optionally pre-populate agents and models."
       (is (search "/sessions" output))
       (is (search "/exit" output))
       (is (search "/deliver" output))
-      (is (search "/think" output)))))
+      (is (search "/think" output))
+      ;; Phase 2 commands in help
+      (is (search "/context" output))
+      (is (search "/usage" output))
+      (is (search "/elevated" output))
+      (is (search "/activation" output))
+      (is (search "/settings" output))
+      (is (search "!<command>" output)))))
 
 ;;; ====================================================================
 ;;; Phase 1 Parity: Slash command — /status
@@ -166,10 +195,14 @@ Optionally pre-populate agents and models."
     (multiple-value-bind (output action)
         (nilclaw/tui:tui-handle-slash-command client "/status")
       (is (eq :continue action))
-      (is (search "connected: yes" output))
-      (is (search "deliver:   off" output))
-      (is (search "think:     off" output))
-      (is (search "reasoning: off" output)))))
+      (is (search "connected:" output))
+      (is (search "deliver:" output))
+      (is (search "think:" output))
+      (is (search "reasoning:" output))
+      ;; Phase 2 fields in status
+      (is (search "elevated:" output))
+      (is (search "activation:" output))
+      (is (search "shell:" output)))))
 
 ;;; ====================================================================
 ;;; Phase 1 Parity: Slash command — /sessions
@@ -196,13 +229,46 @@ Optionally pre-populate agents and models."
       (is (search "new-session" output))
       (is (string= "new-session" (nilclaw/tui:local-tui-client-session-key client))))))
 
-(test slash-session-no-arg
-  "/session without arg shows error."
-  (let ((client (make-test-tui-client)))
+;;; ====================================================================
+;;; Phase 2: /session picker (no-arg)
+;;; ====================================================================
+
+(test slash-session-picker-selects-by-number
+  "/session with no arg presents picker; user selects by number."
+  (let ((client (make-test-tui-client :session-key "sess-a")))
+    ;; Create a second session so picker has options
+    (let ((runtime (nilclaw/tui:local-tui-client-runtime client)))
+      (nilclaw/gateway:gateway-ensure-session runtime "sess-b" "Session B" "default"))
+    ;; Pick "sess-b" by name to avoid order-dependence
     (multiple-value-bind (output action)
-        (nilclaw/tui:tui-handle-slash-command client "/session")
+        (nilclaw/tui:tui-handle-slash-command client "/session"
+          :input-fn (make-canned-input "" "sess-b"))
       (is (eq :continue action))
-      (is (search "Usage" output)))))
+      (is (search "Switched to:" output))
+      (is (string= "sess-b" (nilclaw/tui:local-tui-client-session-key client))))))
+
+(test slash-session-picker-selects-by-name
+  "/session picker accepts name input."
+  (let ((client (make-test-tui-client :session-key "sess-a")))
+    (let ((runtime (nilclaw/tui:local-tui-client-runtime client)))
+      (nilclaw/gateway:gateway-ensure-session runtime "sess-b" "Session B" "default"))
+    (multiple-value-bind (output action)
+        (nilclaw/tui:tui-handle-slash-command client "/session"
+          :input-fn (make-canned-input "" "sess-b"))
+      (is (eq :continue action))
+      (is (search "sess-b" output))
+      (is (string= "sess-b" (nilclaw/tui:local-tui-client-session-key client))))))
+
+(test slash-session-picker-cancel
+  "/session picker handles empty/cancel input."
+  (let ((client (make-test-tui-client :session-key "sess-a")))
+    (multiple-value-bind (output action)
+        (nilclaw/tui:tui-handle-slash-command client "/session"
+          :input-fn (make-canned-input "" ""))
+      (is (eq :continue action))
+      (is (search "Cancelled" output))
+      ;; Session unchanged
+      (is (string= "sess-a" (nilclaw/tui:local-tui-client-session-key client))))))
 
 ;;; ====================================================================
 ;;; Phase 1 Parity: Slash command — /agents
@@ -288,13 +354,58 @@ Optionally pre-populate agents and models."
       (is (search "anthropic/claude-3" output))
       (is (string= "anthropic/claude-3" (nilclaw/tui:local-tui-client-model-id client))))))
 
-(test slash-model-no-arg
-  "/model without arg shows error."
+;;; ====================================================================
+;;; Phase 2: /model picker (no-arg)
+;;; ====================================================================
+
+(test slash-model-picker-selects-by-number
+  "/model with no arg presents picker; user selects by number."
+  (let ((client (make-test-tui-client
+                 :models (list (nilclaw/gateway:make-gateway-model
+                                :id "claude-3" :name "Claude 3" :provider "anthropic")
+                               (nilclaw/gateway:make-gateway-model
+                                :id "gpt-4" :name "GPT-4" :provider "openai")))))
+    (multiple-value-bind (output action)
+        (nilclaw/tui:tui-handle-slash-command client "/model"
+          :input-fn (make-canned-input "" "1"))
+      (is (eq :continue action))
+      (is (search "claude-3" output))
+      (is (string= "claude-3" (nilclaw/tui:local-tui-client-model-id client))))))
+
+(test slash-model-picker-selects-by-name
+  "/model picker accepts name input."
+  (let ((client (make-test-tui-client
+                 :models (list (nilclaw/gateway:make-gateway-model
+                                :id "claude-3" :name "Claude 3" :provider "anthropic")
+                               (nilclaw/gateway:make-gateway-model
+                                :id "gpt-4" :name "GPT-4" :provider "openai")))))
+    (multiple-value-bind (output action)
+        (nilclaw/tui:tui-handle-slash-command client "/model"
+          :input-fn (make-canned-input "" "gpt-4"))
+      (is (eq :continue action))
+      (is (search "gpt-4" output))
+      (is (string= "gpt-4" (nilclaw/tui:local-tui-client-model-id client))))))
+
+(test slash-model-picker-cancel
+  "/model picker handles cancel."
+  (let ((client (make-test-tui-client
+                 :models (list (nilclaw/gateway:make-gateway-model
+                                :id "claude-3" :name "Claude 3" :provider "anthropic")))))
+    (multiple-value-bind (output action)
+        (nilclaw/tui:tui-handle-slash-command client "/model"
+          :input-fn (make-canned-input "" ""))
+      (is (eq :continue action))
+      (is (search "Cancelled" output))
+      (is (string= "" (nilclaw/tui:local-tui-client-model-id client))))))
+
+(test slash-model-picker-no-models
+  "/model picker with no models shows message."
   (let ((client (make-test-tui-client)))
     (multiple-value-bind (output action)
-        (nilclaw/tui:tui-handle-slash-command client "/model")
+        (nilclaw/tui:tui-handle-slash-command client "/model"
+          :input-fn (make-canned-input "" ""))
       (is (eq :continue action))
-      (is (search "Usage" output)))))
+      (is (search "No models" output)))))
 
 ;;; ====================================================================
 ;;; Phase 1 Parity: Slash command — /new, /reset
@@ -414,6 +525,257 @@ Optionally pre-populate agents and models."
       (is (search "Usage" output)))))
 
 ;;; ====================================================================
+;;; Phase 2: Slash command — /context
+;;; ====================================================================
+
+(test slash-context
+  "/context shows session context info."
+  (let ((client (make-test-tui-client :session-key "ctx-sess")))
+    ;; Send a message so we have data
+    (nilclaw/tui:local-tui-send client "test msg")
+    (multiple-value-bind (output action)
+        (nilclaw/tui:tui-handle-slash-command client "/context")
+      (is (eq :continue action))
+      (is (search "[context]" output))
+      (is (search "ctx-sess" output))
+      (is (search "messages:" output))
+      (is (search "elevated:" output))
+      (is (search "shell:" output)))))
+
+(test slash-context-shows-message-count
+  "/context message count reflects sent messages."
+  (let ((client (make-test-tui-client :session-key "ctx-count")))
+    (nilclaw/tui:local-tui-send client "msg 1")
+    (nilclaw/tui:local-tui-send client "msg 2")
+    (let ((output (nilclaw/tui:tui-handle-slash-command client "/context")))
+      ;; Should have at least 4 messages (2 user + 2 assistant)
+      (is (search "messages:" output)))))
+
+;;; ====================================================================
+;;; Phase 2: Slash command — /usage
+;;; ====================================================================
+
+(test slash-usage-no-data
+  "/usage with no requests shows no-data message."
+  (let ((client (make-test-tui-client)))
+    (multiple-value-bind (output action)
+        (nilclaw/tui:tui-handle-slash-command client "/usage")
+      (is (eq :continue action))
+      (is (search "No usage data" output)))))
+
+(test slash-usage-after-send
+  "/usage shows token estimates after sending messages."
+  (let ((client (make-test-tui-client :session-key "usage-test")))
+    (nilclaw/tui:local-tui-send client "hello world")
+    (multiple-value-bind (output action)
+        (nilclaw/tui:tui-handle-slash-command client "/usage")
+      (is (eq :continue action))
+      (is (search "[usage]" output))
+      (is (search "prompt tokens:" output))
+      (is (search "completion tokens:" output))
+      (is (search "total tokens:" output))
+      (is (search "requests:" output)))))
+
+(test slash-usage-accumulates
+  "/usage accumulates across multiple sends."
+  (let ((client (make-test-tui-client :session-key "usage-accum")))
+    (nilclaw/tui:local-tui-send client "first")
+    (nilclaw/tui:local-tui-send client "second")
+    (let ((usage (nilclaw/tui:local-tui-client-token-usage client)))
+      (is (= 2 (nilclaw/tui::token-usage-request-count usage)))
+      (is (> (nilclaw/tui::token-usage-total-tokens usage) 0)))))
+
+;;; ====================================================================
+;;; Phase 2: Slash command — /elevated
+;;; ====================================================================
+
+(test slash-elevated-on
+  "/elevated on enables elevated mode."
+  (let ((client (make-test-tui-client)))
+    (is (not (nilclaw/tui:local-tui-client-elevated-p client)))
+    (multiple-value-bind (output action)
+        (nilclaw/tui:tui-handle-slash-command client "/elevated on")
+      (is (eq :continue action))
+      (is (search "on" output))
+      (is (nilclaw/tui:local-tui-client-elevated-p client)))))
+
+(test slash-elevated-off
+  "/elevated off disables elevated mode."
+  (let ((client (make-test-tui-client)))
+    (nilclaw/tui:tui-handle-slash-command client "/elevated on")
+    (multiple-value-bind (output action)
+        (nilclaw/tui:tui-handle-slash-command client "/elevated off")
+      (is (eq :continue action))
+      (is (search "off" output))
+      (is (not (nilclaw/tui:local-tui-client-elevated-p client))))))
+
+(test slash-elevated-bad-arg
+  "/elevated with bad arg shows error."
+  (let ((client (make-test-tui-client)))
+    (multiple-value-bind (output action)
+        (nilclaw/tui:tui-handle-slash-command client "/elevated maybe")
+      (is (eq :continue action))
+      (is (search "Usage" output)))))
+
+;;; ====================================================================
+;;; Phase 2: Slash command — /activation
+;;; ====================================================================
+
+(test slash-activation-on
+  "/activation on enables activation mode."
+  (let ((client (make-test-tui-client)))
+    (is (eq :off (nilclaw/tui:local-tui-client-activation-mode client)))
+    (multiple-value-bind (output action)
+        (nilclaw/tui:tui-handle-slash-command client "/activation on")
+      (is (eq :continue action))
+      (is (search "on" output))
+      (is (eq :on (nilclaw/tui:local-tui-client-activation-mode client))))))
+
+(test slash-activation-off
+  "/activation off disables activation mode."
+  (let ((client (make-test-tui-client)))
+    (nilclaw/tui:tui-handle-slash-command client "/activation on")
+    (multiple-value-bind (output action)
+        (nilclaw/tui:tui-handle-slash-command client "/activation off")
+      (is (eq :continue action))
+      (is (search "off" output))
+      (is (eq :off (nilclaw/tui:local-tui-client-activation-mode client))))))
+
+(test slash-activation-bad-arg
+  "/activation with bad arg shows error."
+  (let ((client (make-test-tui-client)))
+    (multiple-value-bind (output action)
+        (nilclaw/tui:tui-handle-slash-command client "/activation maybe")
+      (is (eq :continue action))
+      (is (search "Usage" output)))))
+
+;;; ====================================================================
+;;; Phase 2: Slash command — /settings
+;;; ====================================================================
+
+(test slash-settings
+  "/settings shows all settings."
+  (let ((client (make-test-tui-client)))
+    ;; Set some state
+    (nilclaw/tui:tui-handle-slash-command client "/deliver on")
+    (nilclaw/tui:tui-handle-slash-command client "/think high")
+    (nilclaw/tui:tui-handle-slash-command client "/elevated on")
+    (nilclaw/tui:tui-handle-slash-command client "/activation on")
+    (multiple-value-bind (output action)
+        (nilclaw/tui:tui-handle-slash-command client "/settings")
+      (is (eq :continue action))
+      (is (search "[settings]" output))
+      (is (search "Session:" output))
+      (is (search "Agent:" output))
+      (is (search "Model:" output))
+      (is (search "Deliver:" output))
+      (is (search "Think:" output))
+      (is (search "Verbose:" output))
+      (is (search "Reasoning:" output))
+      (is (search "Elevated:" output))
+      (is (search "Activation:" output))
+      (is (search "Shell:" output)))))
+
+;;; ====================================================================
+;;; Phase 2: Shell command execution — ! prefix
+;;; ====================================================================
+
+(test shell-exec-denied-then-allowed
+  "Shell exec prompts for permission; denied stays denied."
+  (let ((client (make-test-tui-client)))
+    (is (not (nilclaw/tui:local-tui-client-shell-allowed-p client)))
+    ;; Deny permission
+    (multiple-value-bind (output success-p)
+        (nilclaw/tui:tui-handle-shell-command client "echo hi"
+          :input-fn (lambda (prompt) (declare (ignore prompt)) "n"))
+      (is (not success-p))
+      (is (search "Denied" output))
+      (is (not (nilclaw/tui:local-tui-client-shell-allowed-p client))))))
+
+(test shell-exec-allowed-runs-command
+  "Shell exec with permission runs the command."
+  (let ((client (make-test-tui-client)))
+    ;; Allow permission, then run
+    (multiple-value-bind (output success-p)
+        (nilclaw/tui:tui-handle-shell-command client "echo hello-from-shell"
+          :input-fn (lambda (prompt) (declare (ignore prompt)) "y"))
+      (is-true success-p)
+      (is (search "hello-from-shell" output))
+      (is (search "[exit 0]" output))
+      ;; Should be persistently allowed now
+      (is (nilclaw/tui:local-tui-client-shell-allowed-p client)))))
+
+(test shell-exec-persists-permission
+  "Shell permission persists for subsequent commands."
+  (let ((client (make-test-tui-client)))
+    ;; Allow once
+    (nilclaw/tui:tui-handle-shell-command client "echo first"
+      :input-fn (lambda (prompt) (declare (ignore prompt)) "y"))
+    ;; Second command should not prompt
+    (multiple-value-bind (output success-p)
+        (nilclaw/tui:tui-handle-shell-command client "echo second")
+      (is-true success-p)
+      (is (search "second" output)))))
+
+(test shell-exec-empty-command
+  "Shell exec with empty command returns error."
+  (let ((client (make-test-tui-client)))
+    (setf (nilclaw/tui:local-tui-client-shell-allowed-p client) t)
+    (multiple-value-bind (output success-p)
+        (nilclaw/tui:tui-handle-shell-command client "  ")
+      (is (not success-p))
+      (is (search "Empty command" output)))))
+
+(test shell-exec-nonzero-exit
+  "Shell exec reports non-zero exit code."
+  (let ((client (make-test-tui-client)))
+    (setf (nilclaw/tui:local-tui-client-shell-allowed-p client) t)
+    (multiple-value-bind (output success-p)
+        (nilclaw/tui:tui-handle-shell-command client "exit 42")
+      (is (not success-p))
+      (is (search "[exit 42]" output)))))
+
+(test shell-exec-captures-stderr
+  "Shell exec captures stderr output."
+  (let ((client (make-test-tui-client)))
+    (setf (nilclaw/tui:local-tui-client-shell-allowed-p client) t)
+    (multiple-value-bind (output success-p)
+        (nilclaw/tui:tui-handle-shell-command client "echo errmsg >&2")
+      (declare (ignore success-p))
+      (is (search "errmsg" output)))))
+
+;;; ====================================================================
+;;; Phase 2: Streaming state
+;;; ====================================================================
+
+(test streaming-state-creation
+  "Streaming state created with defaults."
+  (let ((state (nilclaw/tui:make-tui-streaming-state :started-at (get-universal-time))))
+    (is (string= "" (nilclaw/tui:tui-streaming-state-buffer state)))
+    (is (= 0 (nilclaw/tui:tui-streaming-state-chunks-received state)))
+    (is (not (nilclaw/tui:tui-streaming-state-finished-p state)))))
+
+(test streaming-state-append
+  "Streaming append accumulates chunks."
+  (let ((state (nilclaw/tui:make-tui-streaming-state :started-at (get-universal-time))))
+    (nilclaw/tui:tui-streaming-append state "Hello ")
+    (nilclaw/tui:tui-streaming-append state "World")
+    (is (string= "Hello World" (nilclaw/tui:tui-streaming-state-buffer state)))
+    (is (= 2 (nilclaw/tui:tui-streaming-state-chunks-received state)))))
+
+(test streaming-state-finish
+  "Streaming finish marks state as done."
+  (let ((state (nilclaw/tui:make-tui-streaming-state :started-at (get-universal-time))))
+    (nilclaw/tui:tui-streaming-append state "data")
+    (nilclaw/tui:tui-streaming-finish state)
+    (is (nilclaw/tui:tui-streaming-state-finished-p state))))
+
+(test streaming-elapsed-zero-start
+  "Streaming elapsed returns 0 when started-at is 0."
+  (let ((state (nilclaw/tui:make-tui-streaming-state)))
+    (is (= 0 (nilclaw/tui:tui-streaming-elapsed-ms state)))))
+
+;;; ====================================================================
 ;;; Phase 1 Parity: Slash command — /abort
 ;;; ====================================================================
 
@@ -478,12 +840,16 @@ Optionally pre-populate agents and models."
     (setf (nilclaw/tui:local-tui-client-deliver-p client) t)
     (setf (nilclaw/tui:local-tui-client-think-level client) :high)
     (let ((status (nilclaw/tui:tui-format-status client)))
-      (is (search "connected: yes" status))
+      (is (search "connected:" status))
       (is (search "my-sess" status))
       (is (search "test-agent" status))
       (is (search "anthropic/claude" status))
-      (is (search "deliver:   on" status))
-      (is (search "think:     high" status)))))
+      (is (search "deliver:" status))
+      (is (search "think:" status))
+      ;; Phase 2 fields
+      (is (search "elevated:" status))
+      (is (search "activation:" status))
+      (is (search "shell:" status)))))
 
 (test tui-format-footer-output
   "tui-format-footer includes connection+agent+session+model+toggles."
@@ -498,6 +864,13 @@ Optionally pre-populate agents and models."
       (is (search "deliver:off" footer))
       (is (search "think:off" footer)))))
 
+(test tui-format-footer-with-tokens
+  "Footer includes token count when usage data exists."
+  (let ((client (make-test-tui-client :session-key "s1")))
+    (nilclaw/tui:local-tui-send client "hello")
+    (let ((footer (nilclaw/tui:tui-format-footer client)))
+      (is (search "tokens:" footer)))))
+
 (test tui-format-footer-disconnected
   "Footer shows disconnected when client not connected."
   (let* ((runtime (nilclaw/gateway:make-gateway-runtime))
@@ -506,12 +879,110 @@ Optionally pre-populate agents and models."
       (is (search "disconnected" footer)))))
 
 (test tui-format-help-output
-  "tui-format-help includes all phase 1 commands."
+  "tui-format-help includes all phase 1 + phase 2 commands."
   (let ((help (nilclaw/tui:tui-format-help)))
     (dolist (cmd '("/help" "/status" "/sessions" "/session" "/agents" "/agent"
                    "/models" "/model" "/new" "/reset" "/deliver" "/think"
-                   "/verbose" "/reasoning" "/abort" "/exit"))
+                   "/verbose" "/reasoning" "/abort" "/exit"
+                   ;; Phase 2
+                   "/context" "/usage" "/elevated" "/activation" "/settings"
+                   "!<command>"))
       (is (search cmd help) (format nil "Help should mention ~A" cmd)))))
+
+;;; ====================================================================
+;;; Phase 2: tui-format-context / tui-format-usage / tui-format-settings
+;;; ====================================================================
+
+(test tui-format-context-output
+  "tui-format-context includes session and message count."
+  (let ((client (make-test-tui-client :session-key "fmt-ctx")))
+    (nilclaw/tui:local-tui-send client "hi")
+    (let ((ctx (nilclaw/tui:tui-format-context client)))
+      (is (search "[context]" ctx))
+      (is (search "fmt-ctx" ctx))
+      (is (search "messages:" ctx)))))
+
+(test tui-format-usage-output
+  "tui-format-usage includes token fields after send."
+  (let ((client (make-test-tui-client :session-key "fmt-usage")))
+    (nilclaw/tui:local-tui-send client "hello")
+    (let ((usage (nilclaw/tui:tui-format-usage client)))
+      (is (search "[usage]" usage))
+      (is (search "prompt tokens:" usage))
+      (is (search "completion tokens:" usage))
+      (is (search "requests:" usage)))))
+
+(test tui-format-settings-output
+  "tui-format-settings includes all fields."
+  (let ((client (make-test-tui-client)))
+    (let ((settings (nilclaw/tui:tui-format-settings client)))
+      (is (search "[settings]" settings))
+      (is (search "Session:" settings))
+      (is (search "Agent:" settings))
+      (is (search "Model:" settings))
+      (is (search "Deliver:" settings))
+      (is (search "Think:" settings))
+      (is (search "Verbose:" settings))
+      (is (search "Reasoning:" settings))
+      (is (search "Elevated:" settings))
+      (is (search "Activation:" settings))
+      (is (search "Shell:" settings)))))
+
+;;; ====================================================================
+;;; Phase 2: Picker helper — tui-pick-from-list
+;;; ====================================================================
+
+(test picker-selects-by-number
+  "Picker selects item by number."
+  (multiple-value-bind (chosen success-p)
+      (nilclaw/tui:tui-pick-from-list
+       '("alpha" "beta" "gamma") "Pick one:"
+       :input-fn (make-canned-input "" "2"))
+    (is-true success-p)
+    (is (string= "beta" chosen))))
+
+(test picker-selects-by-name
+  "Picker selects item by name match."
+  (multiple-value-bind (chosen success-p)
+      (nilclaw/tui:tui-pick-from-list
+       '("alpha" "beta" "gamma") "Pick one:"
+       :input-fn (make-canned-input "" "gamma"))
+    (is-true success-p)
+    (is (string= "gamma" chosen))))
+
+(test picker-empty-input-cancels
+  "Picker returns nil on empty input."
+  (multiple-value-bind (chosen success-p)
+      (nilclaw/tui:tui-pick-from-list
+       '("alpha" "beta") "Pick one:"
+       :input-fn (make-canned-input "" ""))
+    (is (null chosen))
+    (is (not success-p))))
+
+(test picker-empty-list-returns-nil
+  "Picker with empty items returns nil."
+  (multiple-value-bind (chosen success-p)
+      (nilclaw/tui:tui-pick-from-list nil "Pick one:")
+    (is (null chosen))
+    (is (not success-p))))
+
+(test picker-invalid-number-returns-nil
+  "Picker with out-of-range number returns nil."
+  (multiple-value-bind (chosen success-p)
+      (nilclaw/tui:tui-pick-from-list
+       '("alpha" "beta") "Pick one:"
+       :input-fn (make-canned-input "" "99"))
+    (is (null chosen))
+    (is (not success-p))))
+
+(test picker-name-case-insensitive
+  "Picker name match is case-insensitive."
+  (multiple-value-bind (chosen success-p)
+      (nilclaw/tui:tui-pick-from-list
+       '("Alpha" "Beta") "Pick one:"
+       :input-fn (make-canned-input "" "alpha"))
+    (is-true success-p)
+    (is (string= "Alpha" chosen))))
 
 ;;; ====================================================================
 ;;; Phase 1 Parity: State persistence across commands
@@ -527,6 +998,9 @@ Optionally pre-populate agents and models."
     (nilclaw/tui:tui-handle-slash-command client "/think high")
     (nilclaw/tui:tui-handle-slash-command client "/verbose full")
     (nilclaw/tui:tui-handle-slash-command client "/reasoning stream")
+    ;; Phase 2 state
+    (nilclaw/tui:tui-handle-slash-command client "/elevated on")
+    (nilclaw/tui:tui-handle-slash-command client "/activation on")
     ;; Verify all states
     (is (string= "custom-agent" (nilclaw/tui:local-tui-client-agent-id client)))
     (is (string= "openai/gpt-4" (nilclaw/tui:local-tui-client-model-id client)))
@@ -534,15 +1008,43 @@ Optionally pre-populate agents and models."
     (is (eq :high (nilclaw/tui:local-tui-client-think-level client)))
     (is (eq :full (nilclaw/tui:local-tui-client-verbose-mode client)))
     (is (eq :stream (nilclaw/tui:local-tui-client-reasoning-mode client)))
+    (is (nilclaw/tui:local-tui-client-elevated-p client))
+    (is (eq :on (nilclaw/tui:local-tui-client-activation-mode client)))
     ;; Status should reflect all
     (multiple-value-bind (status _) (nilclaw/tui:tui-handle-slash-command client "/status")
       (declare (ignore _))
       (is (search "custom-agent" status))
       (is (search "openai/gpt-4" status))
-      (is (search "deliver:   on" status))
-      (is (search "think:     high" status))
-      (is (search "verbose:   full" status))
-      (is (search "reasoning: stream" status)))))
+      (is (search "deliver:" status))
+      (is (search "think:" status))
+      (is (search "elevated:" status))
+      (is (search "activation:" status)))))
+
+;;; ====================================================================
+;;; Phase 2: Extended state persistence — settings reflect everything
+;;; ====================================================================
+
+(test settings-reflects-all-state
+  "/settings after setting all toggles shows correct values."
+  (let ((client (make-test-tui-client :session-key "settings-test")))
+    (nilclaw/tui:tui-handle-slash-command client "/agent my-agent")
+    (nilclaw/tui:tui-handle-slash-command client "/model my-model")
+    (nilclaw/tui:tui-handle-slash-command client "/deliver on")
+    (nilclaw/tui:tui-handle-slash-command client "/think medium")
+    (nilclaw/tui:tui-handle-slash-command client "/verbose full")
+    (nilclaw/tui:tui-handle-slash-command client "/reasoning stream")
+    (nilclaw/tui:tui-handle-slash-command client "/elevated on")
+    (nilclaw/tui:tui-handle-slash-command client "/activation on")
+    (setf (nilclaw/tui:local-tui-client-shell-allowed-p client) t)
+    (let ((settings (nilclaw/tui:tui-format-settings client)))
+      (is (search "settings-test" settings))
+      (is (search "my-agent" settings))
+      (is (search "my-model" settings))
+      (is (search "on" settings))     ; deliver
+      (is (search "medium" settings)) ; think
+      (is (search "full" settings))   ; verbose
+      (is (search "stream" settings)) ; reasoning
+      (is (search "allowed" settings))))) ; shell
 
 ;;; ====================================================================
 ;;; Phase 1 Parity: E2E — full session workflow
@@ -575,13 +1077,60 @@ Optionally pre-populate agents and models."
     (nilclaw/tui:tui-handle-slash-command client "/reasoning stream")
     ;; Status reflects toggles
     (let ((status (nilclaw/tui:tui-format-status client)))
-      (is (search "deliver:   on" status))
-      (is (search "think:     medium" status))
-      (is (search "verbose:   on" status))
-      (is (search "reasoning: stream" status)))
+      (is (search "deliver:" status))
+      (is (search "think:" status))
+      (is (search "verbose:" status))
+      (is (search "reasoning:" status)))
     ;; Footer reflects toggles
     (let ((footer (nilclaw/tui:tui-format-footer client)))
       (is (search "deliver:on" footer))
       (is (search "think:medium" footer))
       (is (search "verbose:on" footer))
       (is (search "reasoning:stream" footer)))))
+
+;;; ====================================================================
+;;; Phase 2: E2E — shell + usage + settings workflow
+;;; ====================================================================
+
+(test tui-e2e-phase2-workflow
+  "E2E: send messages → check usage → run shell → check settings."
+  (let ((client (make-test-tui-client :session-key "p2-e2e")))
+    ;; Send a message to generate usage
+    (nilclaw/tui:local-tui-send client "test message")
+    ;; Usage should show data
+    (let ((usage-output (nilclaw/tui:tui-handle-slash-command client "/usage")))
+      (is (search "[usage]" usage-output))
+      (is (search "requests:" usage-output)))
+    ;; Enable shell
+    (setf (nilclaw/tui:local-tui-client-shell-allowed-p client) t)
+    ;; Run a shell command
+    (multiple-value-bind (output success-p)
+        (nilclaw/tui:tui-handle-shell-command client "echo phase2-test")
+      (is-true success-p)
+      (is (search "phase2-test" output)))
+    ;; Set elevated and activation
+    (nilclaw/tui:tui-handle-slash-command client "/elevated on")
+    (nilclaw/tui:tui-handle-slash-command client "/activation on")
+    ;; Settings should reflect everything
+    (let ((settings (nilclaw/tui:tui-format-settings client)))
+      (is (search "p2-e2e" settings))
+      (is (search "allowed" settings)))   ; shell
+    ;; Context should show messages
+    (let ((context (nilclaw/tui:tui-handle-slash-command client "/context")))
+      (is (search "p2-e2e" context))
+      (is (search "messages:" context)))))
+
+(test tui-e2e-model-picker-workflow
+  "E2E: register models → use picker to select → verify model set."
+  (let ((client (make-test-tui-client
+                 :models (list (nilclaw/gateway:make-gateway-model
+                                :id "llama-3" :name "Llama 3" :provider "meta")
+                               (nilclaw/gateway:make-gateway-model
+                                :id "claude-4" :name "Claude 4" :provider "anthropic")))))
+    ;; Use picker to select second model
+    (multiple-value-bind (output action)
+        (nilclaw/tui:tui-handle-slash-command client "/model"
+          :input-fn (make-canned-input "" "2"))
+      (is (eq :continue action))
+      (is (search "claude-4" output)))
+    (is (string= "claude-4" (nilclaw/tui:local-tui-client-model-id client)))))

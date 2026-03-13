@@ -37,10 +37,32 @@
            #:local-tui-client-think-level
            #:local-tui-client-verbose-mode
            #:local-tui-client-reasoning-mode
+           ;; Phase 2 parity: extended state accessors
+           #:local-tui-client-elevated-p
+           #:local-tui-client-activation-mode
+           #:local-tui-client-shell-allowed-p
+           #:local-tui-client-token-usage
            ;; Slash command dispatch
            #:tui-handle-slash-command
+           ;; Shell exec
+           #:tui-handle-shell-command
            ;; Display helpers
            #:tui-format-status
            #:tui-format-footer
            #:tui-format-history-entry
-           #:tui-format-help))
+           #:tui-format-help
+           #:tui-format-context
+           #:tui-format-usage
+           #:tui-format-settings
+           ;; Picker helpers
+           #:tui-pick-from-list
+           ;; Streaming display
+           #:tui-streaming-state
+           #:make-tui-streaming-state
+           #:tui-streaming-state-buffer
+           #:tui-streaming-state-chunks-received
+           #:tui-streaming-state-started-at
+           #:tui-streaming-state-finished-p
+           #:tui-streaming-append
+           #:tui-streaming-finish
+           #:tui-streaming-elapsed-ms))
