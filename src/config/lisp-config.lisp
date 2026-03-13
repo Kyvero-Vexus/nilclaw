@@ -118,6 +118,11 @@
                     (setf (config-providers cfg)
                           (append (config-providers cfg)
                                   (parse-nested-providers providers-plist))))))
+               ;; OpenClaw-specific keys - silently ignore during migration
+               ;; These are valid in OpenClaw configs but not used by NilClaw
+               ((:meta :env :wizard :tools :bindings :messages :commands :hooks :skills :plugins)
+                ;; Silently ignore - OpenClaw compatibility
+                nil)
                (otherwise
                 (warn "Unknown config key: ~S" key))))
     cfg))
