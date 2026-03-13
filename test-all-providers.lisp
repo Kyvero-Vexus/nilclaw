@@ -33,7 +33,7 @@
                                   ((string= provider-name "anthropic") "claude-3-haiku-20240307")
                                   ((string= provider-name "zai") "zai/glm-5")
                                   ((string= provider-name "lmstudio") "openai/gpt-oss-20b")
-                                  ((string= provider-name "ollama") "llama3.2")
+                                  ((string= provider-name "ollama") "qwen2:0.5b")
                                   (t "openai/gpt-4o-mini"))
                          :messages '(("role" . "user") ("content" . "Say hello")))))
            (format t "  Testing HTTP transport...~%")
