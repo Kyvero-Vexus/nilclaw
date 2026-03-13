@@ -212,6 +212,16 @@
            (not (null pconfig)))
           (values nil nil)))))
 
+(declaim (ftype (function (config string) string) get-provider-transport))
+(defun get-provider-transport (cfg provider-name)
+  "Get the transport mode for a provider from config.
+   Returns \"http\" (default), \"claude-cli\", etc."
+  (declare (type config cfg)
+           (type string provider-name))
+  (let ((pconfig (get-provider-config cfg provider-name)))
+    (or (when pconfig (getf pconfig :transport))
+        "http")))
+
 ;;; Provider lookup helpers
 
 (declaim (ftype (function (config) list) list-configured-providers))

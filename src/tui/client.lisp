@@ -941,7 +941,8 @@ Connects to a running gateway and provides a terminal chat interface."
                            (if (> (length p) 0)
                                p
                                (or (nilclaw/config:config-default-provider cfg)
-                                   "openrouter")))))
+                                   "openrouter"))))
+                       (transport (nilclaw/config:get-provider-transport cfg provider-name)))
                   (multiple-value-bind (provider-runtime found-p)
                       (nilclaw/config:make-provider-runtime-from-config
                        cfg provider-name :model effective-model)
@@ -957,8 +958,23 @@ Connects to a running gateway and provides a terminal chat interface."
                                             (cons :content (nilclaw/gateway:gateway-message-content msg))))
                                     history)))
                       (handler-case
-                          (nilclaw/agent:agent-chat message provider-runtime
-                                                    :history chat-history)
+                          (cond
+                            ;; Claude CLI transport: direct Claude Max path
+                            ((string-equal transport "claude-cli")
+                             (let ((result (nilclaw/provider:claude-cli-complete
+                                           message effective-model)))
+                               (if result
+                                   (values result t)
+                                   (values "[error: claude-cli transport failed]" nil))))
+                            ;; HTTP with Claude CLI fallback for Anthropic auth failures
+                            ((string-equal provider-name "anthropic")
+                             (nilclaw/agent:agent-chat-with-fallback
+                              message provider-runtime effective-model
+                              :history chat-history))
+                            ;; Default HTTP transport
+                            (t
+                             (nilclaw/agent:agent-chat message provider-runtime
+                                                       :history chat-history)))
                         (error (e)
                           (values (format nil "[error: ~A]" e) nil))))))))))
     ;; Connect

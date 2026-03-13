@@ -22,4 +22,6 @@
            #:agent-handle-request
            ;; Agent loop
            #:agent-chat
-           #:make-chat-transport-fn))
+           #:agent-chat-with-fallback
+           #:make-chat-transport-fn
+           #:make-chat-transport-fn-with-fallback))

@@ -90,6 +90,9 @@ The example below is enough to run local CLI mode (replace API key):
 
 - Defines LLM provider connection parameters and API keys.
 - Common providers: `openrouter`, `openai`, `anthropic`, `groq`.
+- Each provider accepts an optional `transport` field:
+  - `"http"` (default) — standard HTTP API with API key auth
+  - `"claude-cli"` — route completions through the `claude` CLI binary (Claude Max subscription path)
 
 Example:
 
@@ -104,6 +107,35 @@ Example:
   }
 }
 ```
+
+#### Claude Max (Claude CLI Transport)
+
+To use your Claude Max subscription instead of API pay-as-you-go:
+
+1. Install and authenticate the [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code):
+   ```bash
+   claude login
+   ```
+2. Set the Anthropic provider transport to `claude-cli`:
+   ```json
+   {
+     "models": {
+       "providers": {
+         "anthropic": { "transport": "claude-cli" }
+       }
+     }
+   }
+   ```
+   Or in native Lisp config (`nilclaw.lisp`):
+   ```lisp
+   (:providers ((:name "anthropic" :transport "claude-cli")))
+   ```
+3. Select an Anthropic model: `/model anthropic/claude-opus-4-0520`
+
+**Automatic fallback:** When using the default `"http"` transport, if an Anthropic API key
+authentication fails, NilClaw will automatically attempt the Claude CLI path as a fallback
+(if the `claude` binary is available and logged in). No configuration change is needed for
+this fallback behavior.
 
 ### `agents.defaults.model.primary`
 

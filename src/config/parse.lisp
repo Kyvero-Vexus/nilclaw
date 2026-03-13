@@ -338,6 +338,7 @@
                                                      (cl-json:encode-json-to-string k)
                                                      k))
                                       :base-url (json-getf pdata :base--url)
+                                      :transport (or (json-getf pdata :transport) "http")
                                       :native-tools (let ((v (json-getf pdata :native--tools :unset)))
                                                       (if (eq v :unset) t v)))))))))
     ;; Auth profiles (for OAuth providers)

@@ -50,7 +50,8 @@
        (:file "types")
        (:file "http")
        (:file "compatible")
-       (:file "dexador")))
+       (:file "dexador")
+       (:file "claude-cli")))
      (:module "skills"
       :components
       ((:file "package")
@@ -130,4 +131,5 @@
      (:file "gateway-http-tests")
      (:file "gateway-ws-tests")
      (:file "auth-tests")
-     (:file "tui-tests")))))
+     (:file "tui-tests")
+     (:file "claude-cli-tests")))))

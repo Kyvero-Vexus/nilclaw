@@ -52,4 +52,11 @@
            #:http-backend-enabled-p
            #:build-auth-header
            #:build-request-headers
-           #:*current-provider-headers*))
+           #:*current-provider-headers*
+           ;; Claude CLI transport (Claude Max path)
+           #:claude-cli-available-p
+           #:reset-claude-cli-cache
+           #:claude-cli-complete
+           #:make-claude-cli-transport-fn
+           #:shell-escape
+           #:provider-transport))

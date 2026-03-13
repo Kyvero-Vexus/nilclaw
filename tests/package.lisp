@@ -91,6 +91,10 @@
   :description "Auth module tests"
   :in nilclaw-suite)
 
+(def-suite claude-cli-suite
+  :description "Claude CLI transport (Claude Max) tests"
+  :in providers-suite)
+
 (def-suite tui-suite
   :description "TUI client module tests"
   :in nilclaw-suite)

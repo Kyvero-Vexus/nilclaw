@@ -23,6 +23,36 @@
         (values (nilclaw/provider:http-transport-result-content result)
                 (nilclaw/provider:http-transport-result-error-code result))))))
 
+(declaim (ftype (function (nilclaw/provider:provider-runtime string)
+                          function)
+                make-chat-transport-fn-with-fallback))
+(defun make-chat-transport-fn-with-fallback (runtime model)
+  "Create a transport function that tries HTTP first, then falls back to Claude CLI
+   on :auth-failed errors for Anthropic providers.
+   MODEL is the full model string (may include provider/ prefix).
+   Returns a function with signature (request attempt-index) -> (values content error-code)."
+  (declare (type nilclaw/provider:provider-runtime runtime)
+           (type string model))
+  (let ((http-fn (make-chat-transport-fn runtime))
+        (provider-name (nilclaw/provider:provider-runtime-name runtime))
+        (cli-fn (nilclaw/provider:make-claude-cli-transport-fn model)))
+    (lambda (request attempt-index)
+      (declare (type nilclaw/provider:provider-request request)
+               (type (integer 0 *) attempt-index))
+      ;; Try HTTP first
+      (multiple-value-bind (content error-code)
+          (funcall http-fn request attempt-index)
+        (cond
+          ;; HTTP succeeded
+          (content (values content nil))
+          ;; Auth failed on Anthropic provider — try Claude CLI fallback
+          ((and (eq error-code :auth-failed)
+                (string-equal provider-name "anthropic")
+                (nilclaw/provider:claude-cli-available-p))
+           (funcall cli-fn request attempt-index))
+          ;; Other error — return as-is
+          (t (values content error-code)))))))
+
 (declaim (ftype (function (string nilclaw/provider:provider-runtime
                            &key (:system-prompt (or null string))
                                 (:history list))
@@ -50,6 +80,40 @@
                    :model (nilclaw/provider:provider-runtime-model provider-runtime)
                    :messages messages))
          (transport-fn (make-chat-transport-fn provider-runtime))
+         (result (nilclaw/provider:provider-complete
+                  provider-runtime request transport-fn)))
+    (if (nilclaw/provider:provider-result-success-p result)
+        (values (or (nilclaw/provider:provider-result-content result) "") t)
+        (values (format nil "[error: ~A after ~D attempt~:P]"
+                        (or (nilclaw/provider:provider-result-error-code result) :unknown)
+                        (nilclaw/provider:provider-result-attempts result))
+                nil))))
+
+(declaim (ftype (function (string nilclaw/provider:provider-runtime string
+                           &key (:system-prompt (or null string))
+                                (:history list))
+                          (values (or null string) boolean &optional))
+                agent-chat-with-fallback))
+(defun agent-chat-with-fallback (user-message provider-runtime model
+                                 &key (system-prompt nil) (history nil))
+  "Process a chat message with HTTP-first, Claude CLI fallback on auth-failed.
+   USER-MESSAGE is the user's input string.
+   PROVIDER-RUNTIME is the configured provider runtime.
+   MODEL is the full model string for Claude CLI fallback.
+   Returns (values response-text success-p)."
+  (declare (type string user-message model)
+           (type nilclaw/provider:provider-runtime provider-runtime)
+           (type (or null string) system-prompt)
+           (type list history))
+  (let* ((messages (append
+                    (when system-prompt
+                      (list `((:role . "system") (:content . ,system-prompt))))
+                    history
+                    (list `((:role . "user") (:content . ,user-message)))))
+         (request (nilclaw/provider:make-provider-request
+                   :model (nilclaw/provider:provider-runtime-model provider-runtime)
+                   :messages messages))
+         (transport-fn (make-chat-transport-fn-with-fallback provider-runtime model))
          (result (nilclaw/provider:provider-complete
                   provider-runtime request transport-fn)))
     (if (nilclaw/provider:provider-result-success-p result)

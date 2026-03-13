@@ -105,6 +105,7 @@
    #:list-configured-providers
    #:provider-configured-p
    #:resolve-default-provider
+   #:get-provider-transport
    ;; Native Lisp config
    #:find-config-file
    #:apply-config-plist
