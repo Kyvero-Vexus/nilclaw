@@ -57,6 +57,14 @@
       ((:file "package")
        (:file "types")
        (:file "registry")))
+     (:module "toolbox"
+      :components
+      ((:file "package")
+       (:file "identity")
+       (:file "tools")
+       (:file "memory-tools")
+       (:file "agent-tools")
+       (:file "presets")))
      (:module "bootstrap"
       :components
       ((:file "package")
@@ -132,4 +140,5 @@
      (:file "gateway-ws-tests")
      (:file "auth-tests")
      (:file "tui-tests")
-     (:file "claude-cli-tests")))))
+     (:file "claude-cli-tests")
+     (:file "toolbox-tests")))))

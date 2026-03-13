@@ -99,6 +99,10 @@
   :description "TUI client module tests"
   :in nilclaw-suite)
 
+(def-suite toolbox-suite
+  :description "Standard toolbox module tests"
+  :in nilclaw-suite)
+
 (defun run-nilclaw-tests ()
   "Run all NilClaw tests and return results."
   (run! 'nilclaw-suite))
