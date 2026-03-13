@@ -7,12 +7,12 @@
 
 ;;; ─── Constants ───────────────────────────────────────────────────────
 
-(defconstant +openai-codex-client-id+ "app_EMoamEEZ73f0CkXaXp7hrann")
-(defconstant +openai-codex-token-url+ "https://auth.openai.com/oauth/token")
-(defconstant +openai-codex-authorize-url+ "https://auth.openai.com/oauth/authorize")
-(defconstant +openai-codex-redirect-uri+ "http://localhost:1455/auth/callback")
-(defconstant +openai-codex-scope+ "openid profile email offline_access")
-(defconstant +callback-port+ 1455)
+(defparameter +openai-codex-client-id+ "app_EMoamEEZ73f0CkXaXp7hrann")
+(defparameter +openai-codex-token-url+ "https://auth.openai.com/oauth/token")
+(defparameter +openai-codex-authorize-url+ "https://auth.openai.com/oauth/authorize")
+(defparameter +openai-codex-redirect-uri+ "http://localhost:1455/auth/callback")
+(defparameter +openai-codex-scope+ "openid profile email offline_access")
+(defparameter +callback-port+ 1455)
 
 ;;; ─── Paths ───────────────────────────────────────────────────────────
 
@@ -189,7 +189,7 @@
 (defvar *callback-state* nil "State parameter received from callback.")
 (defvar *expected-state* nil "Expected state parameter for validation.")
 
-(defconstant +success-html+
+(defparameter +success-html+
   "<!doctype html>
 <html lang=\"en\">
 <head>
