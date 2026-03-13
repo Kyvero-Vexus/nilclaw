@@ -13,7 +13,12 @@
   (agents nil :type list)         ; list of gateway-agent
   (models nil :type list)         ; list of gateway-model
   (connections nil :type list)    ; list of gateway-connection
-  (event-log nil :type list))     ; list of emitted events (for testing)
+  (event-log nil :type list)      ; list of emitted events (for testing)
+  ;; Provider completion function — when non-nil, handle-chat-send calls this
+  ;; instead of producing dummy echo responses.
+  ;; Signature: (lambda (message model-id history) -> (values text success-p))
+  ;; where history is a list of gateway-message structs for the session.
+  (chat-fn nil :type (or null function)))
 
 ;;; --- Request/Response ---
 
@@ -281,9 +286,23 @@ Returns (values challenge-event connection)."
                ;; Emit assistant response and both event surfaces consumed by clients:
                ;; - event:"chat" streaming lifecycle (state=delta|final)
                ;; - method event chat.message (legacy/non-stream consumers)
-               (let* ((assistant-text (if (string= message-text "__force_chat_error__")
-                                          (error "forced chat.send error")
-                                          (format nil "Echo: ~A" message-text)))
+               (let* ((chat-fn (gateway-runtime-chat-fn runtime))
+                      (model-id (or (param-get params :model-id :|modelId|) ""))
+                      (session-history (gateway-session-messages session))
+                      (assistant-text
+                       (cond
+                         ;; Test hook: forced error
+                         ((string= message-text "__force_chat_error__")
+                          (error "forced chat.send error"))
+                         ;; Real provider path: call chat-fn when wired
+                         (chat-fn
+                          (multiple-value-bind (text success-p)
+                              (funcall chat-fn message-text model-id session-history)
+                            (if success-p
+                                text
+                                (or text "[error: provider call failed]"))))
+                         ;; Fallback echo (tests / no provider wired)
+                         (t (format nil "Echo: ~A" message-text))))
                       (assistant-timestamp (get-universal-time))
                       (assistant-msg (make-gateway-message
                                       :role "assistant"

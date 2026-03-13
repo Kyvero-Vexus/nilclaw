@@ -186,12 +186,14 @@ Performs challenge → connect handshake in-process."
   (let* ((runtime (local-tui-client-runtime client))
          (session-key (local-tui-client-session-key client))
          (usage (local-tui-client-token-usage client))
+         (model-id (local-tui-client-model-id client))
          (response (nilclaw/gateway:gateway-handle-request
                     (nilclaw/gateway:make-gateway-request
                      :id (format nil "tui-msg-~A" (get-universal-time))
                      :method "chat.send"
                      :params (list :session-key session-key
-                                   :message message))
+                                   :message message
+                                   :model-id model-id))
                     runtime)))
     ;; Update token usage estimates (gateway doesn't provide real counts yet,
     ;; so we estimate based on message length)
@@ -906,8 +908,7 @@ Returns (values default-agent-id default-model-id)."
 Connects to a running gateway and provides a terminal chat interface."
   (declare (type string gateway-url session-key)
            (ignorable gateway-url))
-  ;; For the interactive TUI, we use a local runtime
-  ;; (in a full implementation, this would connect via WebSocket)
+  ;; For the interactive TUI, we use a local runtime backed by real provider.
   (let* ((runtime (nilclaw/gateway:make-gateway-runtime))
          (client (make-local-tui-client runtime :session-key session-key)))
     ;; Seed runtime registries from config so /models, /agents, /session pickers
@@ -916,6 +917,50 @@ Connects to a running gateway and provides a terminal chat interface."
         (tui-seed-runtime-from-config runtime session-key)
       (setf (local-tui-client-agent-id client) default-agent)
       (setf (local-tui-client-model-id client) default-model))
+    ;; Wire up real provider completion via chat-fn.
+    ;; The chat-fn builds a provider-runtime on each call, honoring current model-id.
+    (let ((cfg (handler-case (nilclaw/config:load-config nil)
+                 (error () (nilclaw/config:make-default-config)))))
+      (nilclaw/provider:enable-dexador-backend)
+      (setf (nilclaw/gateway:gateway-runtime-chat-fn runtime)
+            (lambda (message model-id history)
+              (declare (type string message model-id)
+                       (type list history))
+              (block chat-fn-body
+                (let* ((effective-model
+                         (if (and model-id (> (length model-id) 0))
+                             model-id
+                             (or (nilclaw/config:config-default-model cfg)
+                                 (format nil "~A/default"
+                                         (or (nilclaw/config:config-default-provider cfg)
+                                             "openrouter")))))
+                       (provider-name
+                         (multiple-value-bind (p m)
+                             (nilclaw/config:parse-model-string effective-model)
+                           (declare (ignore m))
+                           (if (> (length p) 0)
+                               p
+                               (or (nilclaw/config:config-default-provider cfg)
+                                   "openrouter")))))
+                  (multiple-value-bind (provider-runtime found-p)
+                      (nilclaw/config:make-provider-runtime-from-config
+                       cfg provider-name :model effective-model)
+                    (declare (ignore found-p))
+                    (unless provider-runtime
+                      (return-from chat-fn-body
+                        (values (format nil "[error: no provider runtime for ~A]" provider-name)
+                                nil)))
+                    ;; Build history for agent-chat from gateway messages
+                    (let ((chat-history
+                            (mapcar (lambda (msg)
+                                      (list (cons :role (nilclaw/gateway:gateway-message-role msg))
+                                            (cons :content (nilclaw/gateway:gateway-message-content msg))))
+                                    history)))
+                      (handler-case
+                          (nilclaw/agent:agent-chat message provider-runtime
+                                                    :history chat-history)
+                        (error (e)
+                          (values (format nil "[error: ~A]" e) nil))))))))))
     ;; Connect
     (unless (local-tui-connect client)
       (format *error-output* "[nilclaw-tui] Failed to connect~%")

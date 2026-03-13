@@ -10,6 +10,7 @@
            #:gateway-runtime-models
            #:gateway-runtime-connections
            #:gateway-runtime-event-log
+           #:gateway-runtime-chat-fn
            #:make-gateway-runtime
            #:make-default-gateway-runtime
            #:gateway-runtime-ready-p

@@ -1146,3 +1146,110 @@ Optionally pre-populate agents and models."
       (is (eq :continue action))
       (is (search "claude-4" output)))
     (is (string= "claude-4" (nilclaw/tui:local-tui-client-model-id client)))))
+
+;;; ====================================================================
+;;; Provider-backed chat-fn tests (non-echo path)
+;;; ====================================================================
+
+(defun make-mock-chat-fn (&key (response "mock-provider-response") (success t) (track-calls nil))
+  "Create a mock chat-fn that returns a fixed response.
+When TRACK-CALLS is a cons cell, pushes (message model-id) onto (car track-calls)."
+  (lambda (message model-id history)
+    (declare (type string message model-id)
+             (type list history)
+             (ignore history))
+    (when track-calls
+      (push (list message model-id) (car track-calls)))
+    (values response success)))
+
+(defun make-test-tui-client-with-chat-fn (chat-fn &key (session-key "test-provider")
+                                                        (models nil))
+  "Create a local TUI client with a custom chat-fn wired into the runtime."
+  (let* ((runtime (nilclaw/gateway:make-gateway-runtime
+                   :models models
+                   :chat-fn chat-fn))
+         (client (nilclaw/tui:make-local-tui-client runtime :session-key session-key)))
+    (nilclaw/tui:local-tui-connect client)
+    client))
+
+(test chat-fn-non-echo-response
+  "When chat-fn is set, local-tui-send returns provider response, not Echo."
+  (let* ((chat-fn (make-mock-chat-fn :response "Real provider says hello"))
+         (client (make-test-tui-client-with-chat-fn chat-fn)))
+    (multiple-value-bind (response success-p)
+        (nilclaw/tui:local-tui-send client "test message")
+      (is-true success-p)
+      (is (stringp response))
+      ;; Must NOT contain Echo:
+      (is (not (search "Echo:" response)))
+      ;; Must contain the mock provider response
+      (is (search "Real provider says hello" response)))))
+
+(test chat-fn-model-selection-influences-provider
+  "Model set via /model is passed through to chat-fn."
+  (let* ((calls (list nil))
+         (chat-fn (make-mock-chat-fn :response "ok" :track-calls calls))
+         (client (make-test-tui-client-with-chat-fn chat-fn)))
+    ;; Set model
+    (nilclaw/tui:tui-handle-slash-command client "/model anthropic/claude-opus-4-0520")
+    (is (string= "anthropic/claude-opus-4-0520" (nilclaw/tui:local-tui-client-model-id client)))
+    ;; Send message
+    (nilclaw/tui:local-tui-send client "hello")
+    ;; Verify chat-fn was called with the right model
+    (let ((recorded (car calls)))
+      (is (= 1 (length recorded)))
+      (let ((call (first recorded)))
+        (is (string= "hello" (first call)))
+        (is (string= "anthropic/claude-opus-4-0520" (second call)))))))
+
+(test chat-fn-model-switch-changes-provider-model
+  "Switching models via /model changes which model is sent to chat-fn."
+  (let* ((calls (list nil))
+         (chat-fn (make-mock-chat-fn :response "ok" :track-calls calls))
+         (client (make-test-tui-client-with-chat-fn chat-fn)))
+    ;; First model
+    (nilclaw/tui:tui-handle-slash-command client "/model ollama/llama3")
+    (nilclaw/tui:local-tui-send client "msg1")
+    ;; Switch model
+    (nilclaw/tui:tui-handle-slash-command client "/model anthropic/claude-sonnet-4-20250514")
+    (nilclaw/tui:local-tui-send client "msg2")
+    ;; Verify both calls with correct models
+    (let ((recorded (reverse (car calls))))
+      (is (= 2 (length recorded)))
+      (is (string= "ollama/llama3" (second (first recorded))))
+      (is (string= "anthropic/claude-sonnet-4-20250514" (second (second recorded)))))))
+
+(test chat-fn-error-handling-returns-error-message
+  "When chat-fn returns failure, response contains error, not echo."
+  (let* ((chat-fn (make-mock-chat-fn :response "[error: AUTH_FAILED after 1 attempt]"
+                                     :success nil))
+         (client (make-test-tui-client-with-chat-fn chat-fn)))
+    (multiple-value-bind (response success-p)
+        (nilclaw/tui:local-tui-send client "should fail")
+      ;; The gateway still returns ok-p t (message was processed), but
+      ;; the assistant content should contain the error from chat-fn
+      (is (stringp response))
+      (is (not (search "Echo:" response)))
+      (is (search "error" (string-downcase response))))))
+
+(test chat-fn-exception-returns-error-not-echo
+  "When chat-fn signals an error, handle-chat-send catches it gracefully."
+  (let* ((chat-fn (lambda (message model-id history)
+                    (declare (ignore message model-id history))
+                    (error "simulated provider crash")))
+         (client (make-test-tui-client-with-chat-fn chat-fn)))
+    ;; The handler-case in handle-chat-send should catch this
+    (multiple-value-bind (response success-p)
+        (nilclaw/tui:local-tui-send client "crash test")
+      (declare (ignore success-p))
+      ;; Should not be an echo
+      (is (not (search "Echo:" response))))))
+
+(test no-chat-fn-falls-back-to-echo
+  "When chat-fn is nil (default), echo behavior is preserved for tests."
+  (let ((client (make-test-tui-client :session-key "echo-fallback")))
+    (multiple-value-bind (response success-p)
+        (nilclaw/tui:local-tui-send client "test echo")
+      (is-true success-p)
+      (is (search "Echo:" response))
+      (is (search "test echo" response)))))
