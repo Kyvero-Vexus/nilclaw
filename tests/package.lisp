@@ -83,6 +83,10 @@
   :description "Gateway HTTP server tests"
   :in nilclaw-suite)
 
+(def-suite gateway-ws-suite
+  :description "Gateway WebSocket transport tests"
+  :in nilclaw-suite)
+
 (def-suite auth-suite
   :description "Auth module tests"
   :in nilclaw-suite)

@@ -5,7 +5,7 @@
   :version "0.1.0"
   :author "Chrysolambda"
   :license "AGPL-3.0-or-later"
-  :depends-on ("alexandria" "babel" "cl-json" "cl-ppcre" "hunchentoot" "ironclad" "uiop")
+  :depends-on ("alexandria" "babel" "cl-json" "cl-ppcre" "hunchentoot" "hunchensocket" "ironclad" "uiop")
   :serial t
   :components
   ((:module "src"
@@ -87,6 +87,7 @@
        (:file "types")
        (:file "gateway")
        (:file "http")
+       (:file "websocket")
        (:file "main")))
      (:module "subagent"
       :components
@@ -95,7 +96,7 @@
 
 (defsystem "nilclaw/tests"
   :description "NilClaw test suite"
-  :depends-on ("nilclaw" "fiveam" "drakma" "babel" "ironclad")
+  :depends-on ("nilclaw" "fiveam" "drakma" "babel" "ironclad" "cl-base64")
   :serial t
   :components
   ((:module "tests"
@@ -123,4 +124,5 @@
      (:file "lisp-config-tests")
      (:file "agent-chat-tests")
      (:file "gateway-http-tests")
+     (:file "gateway-ws-tests")
      (:file "auth-tests")))))

@@ -27,6 +27,7 @@ Handles nested plists and lists of plists."
     (labels ((write-value (v)
                (cond
                  ((null v) (write-string "null" s))
+                 ((eq v :false) (write-string "false" s))
                  ((eq v t) (write-string "true" s))
                  ((integerp v) (format s "~D" v))
                  ((floatp v) (format s "~F" v))
@@ -177,7 +178,13 @@ Returns the acceptor."
     (format *error-output* "[nilclaw-http] Server already running, stopping first...~%")
     (stop-http-server))
   (setf *http-runtime* (or runtime (make-default-gateway-runtime)))
-  (let ((acceptor (make-instance 'hunchentoot:easy-acceptor
+  ;; Use websocket-acceptor to support both HTTP and WS on the same port.
+  ;; The websocket-acceptor inherits from easy-acceptor, so easy-handlers work.
+  (setf *ws-resource* (make-instance 'gateway-ws-resource
+                                      :runtime (or runtime (make-default-gateway-runtime))))
+  (setf hunchensocket:*websocket-dispatch-table*
+        (list (lambda (request) (declare (ignore request)) *ws-resource*)))
+  (let ((acceptor (make-instance 'gateway-ws-acceptor
                                  :port port
                                  :address "127.0.0.1")))
     ;; Suppress Hunchentoot's default logging to keep output clean
@@ -195,7 +202,8 @@ Returns the acceptor."
     (hunchentoot:stop *http-server*)
     (format t "[nilclaw-http] HTTP server stopped~%")
     (setf *http-server* nil)
-    (setf *http-runtime* nil))
+    (setf *http-runtime* nil)
+    (setf *ws-resource* nil))
   nil)
 
 (declaim (ftype (function () boolean) http-server-running-p))

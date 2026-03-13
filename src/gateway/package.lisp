@@ -125,4 +125,13 @@
            #:handle-status
            #:handle-chat-post
            #:plist-to-json
-           #:json-to-plist))
+           #:json-to-plist
+           ;; WebSocket transport
+           #:gateway-ws-acceptor
+           #:gateway-ws-resource
+           #:gateway-ws-client
+           #:*ws-resource*
+           #:response-to-wire-json
+           #:event-to-wire-json
+           #:wire-json-to-request
+           #:alist-to-plist-deep))
