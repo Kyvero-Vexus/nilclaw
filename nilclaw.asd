@@ -89,6 +89,10 @@
        (:file "http")
        (:file "websocket")
        (:file "main")))
+     (:module "tui"
+      :components
+      ((:file "package")
+       (:file "client")))
      (:module "subagent"
       :components
       ((:file "package")
@@ -125,4 +129,5 @@
      (:file "agent-chat-tests")
      (:file "gateway-http-tests")
      (:file "gateway-ws-tests")
-     (:file "auth-tests")))))
+     (:file "auth-tests")
+     (:file "tui-tests")))))

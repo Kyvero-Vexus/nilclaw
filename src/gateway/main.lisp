@@ -199,6 +199,7 @@
   (format t "Commands:~%")
   (format t "  start [config]   Start the daemon (default command)~%")
   (format t "  chat [options]   Chat with a provider~%")
+  (format t "  tui [options]    Terminal UI client~%")
   (format t "  auth [command]   OAuth token management~%")
   (format t "  check [config]   Validate configuration~%")
   (format t "  migrate          Show migration instructions~%")
@@ -265,6 +266,27 @@
              (run-chat :config-path config-path
                        :model model
                        :system-prompt system-prompt))))
+      ((string= command "tui")
+       ;; Parse tui sub-options — use runtime lookup to avoid circular dep
+       (let ((gateway-url "ws://127.0.0.1:18789")
+             (session-key "tui-session")
+             (rest-args (rest args)))
+         (loop while rest-args
+               do (let ((arg (pop rest-args)))
+                    (cond
+                      ((string= arg "--url")
+                       (setf gateway-url (or (pop rest-args) gateway-url)))
+                      ((string= arg "--session")
+                       (setf session-key (or (pop rest-args) session-key))))))
+         (let ((tui-pkg (find-package "NILCLAW/TUI")))
+           (if tui-pkg
+               (let ((run-fn (find-symbol "RUN-TUI" tui-pkg)))
+                 (when run-fn
+                   (funcall run-fn :gateway-url gateway-url
+                                   :session-key session-key)))
+               (progn
+                 (format *error-output* "[nilclaw] TUI module not loaded~%")
+                 (uiop:quit 1))))))
       ((string= command "version")
        (format t "NilClaw 0.1.0~%"))
       ((string= command "check")

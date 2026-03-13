@@ -91,6 +91,10 @@
   :description "Auth module tests"
   :in nilclaw-suite)
 
+(def-suite tui-suite
+  :description "TUI client module tests"
+  :in nilclaw-suite)
+
 (defun run-nilclaw-tests ()
   "Run all NilClaw tests and return results."
   (run! 'nilclaw-suite))

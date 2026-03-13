@@ -236,3 +236,36 @@
     (is (eq :capacity-or-payload-error (nilclaw/agent:agent-response-code missing-task)))
     (is (not (nilclaw/agent:agent-response-ok-p disabled)))
     (is (eq :disabled (nilclaw/agent:agent-response-code disabled)))))
+
+(test e2e-native-tui-path
+  "End-to-end: nilclaw's native TUI client connects, chats, and retrieves history
+through the gateway protocol without any OpenClaw dependency."
+  ;; 1. Create gateway runtime and TUI client
+  (let* ((runtime (nilclaw/gateway:make-gateway-runtime))
+         (client (nilclaw/tui:make-local-tui-client runtime :session-key "e2e-tui")))
+    ;; 2. Connect via gateway protocol handshake
+    (is (nilclaw/tui:local-tui-connect client))
+    (is (nilclaw/tui:local-tui-client-connected-p client))
+    ;; 3. Send a message and receive response
+    (multiple-value-bind (response success-p)
+        (nilclaw/tui:local-tui-send client "hello from e2e tui")
+      (is-true success-p)
+      (is (stringp response))
+      (is (search "hello from e2e tui" response)))
+    ;; 4. Retrieve history and verify structure
+    (let ((history (nilclaw/tui:local-tui-history client)))
+      (is (>= (length history) 2))
+      (let ((user-msg (first history)))
+        (is (string= "user" (getf user-msg :role)))
+        (is (string= "hello from e2e tui" (getf user-msg :content)))))
+    ;; 5. Multi-turn works
+    (multiple-value-bind (r2 s2)
+        (nilclaw/tui:local-tui-send client "second turn")
+      (is-true s2)
+      (is (stringp r2)))
+    (let ((history (nilclaw/tui:local-tui-history client)))
+      (is (>= (length history) 4)))))
+
+(test e2e-tui-entrypoint
+  "TUI entrypoint is available in nilclaw (not dependent on openclaw tui)."
+  (is (nilclaw/tui:tui-entrypoint-available-p)))
