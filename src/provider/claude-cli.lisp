@@ -69,8 +69,10 @@
                              (subseq model (1+ slash))
                              model)))
            ;; Build claude CLI command
-           ;; claude -p "prompt" --model MODEL --output-format text
-           (cmd (format nil "~A -p ~A --model ~A --output-format text 2>&1"
+           ;; Force Claude Max subscription auth path by unsetting ANTHROPIC_API_KEY
+           ;; so local environment API keys don't force pay-as-you-go mode.
+           ;; env -u ANTHROPIC_API_KEY claude -p "prompt" --model MODEL --output-format text
+           (cmd (format nil "env -u ANTHROPIC_API_KEY ~A -p ~A --model ~A --output-format text 2>&1"
                         cli-path
                         (shell-escape prompt)
                         (shell-escape bare-model))))
