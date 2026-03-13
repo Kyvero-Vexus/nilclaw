@@ -103,6 +103,10 @@
   :description "Standard toolbox module tests"
   :in nilclaw-suite)
 
+(def-suite workspace-suite
+  :description "Workspace boot and identity module tests"
+  :in nilclaw-suite)
+
 (defun run-nilclaw-tests ()
   "Run all NilClaw tests and return results."
   (run! 'nilclaw-suite))

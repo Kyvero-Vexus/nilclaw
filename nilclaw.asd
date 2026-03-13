@@ -57,6 +57,15 @@
       ((:file "package")
        (:file "types")
        (:file "registry")))
+     (:module "workspace"
+      :components
+      ((:file "package")
+       (:file "constants")
+       (:file "security")
+       (:file "fingerprint")
+       (:file "provider")
+       (:file "workspace")
+       (:file "aieos")))
      (:module "toolbox"
       :components
       ((:file "package")
@@ -141,4 +150,5 @@
      (:file "auth-tests")
      (:file "tui-tests")
      (:file "claude-cli-tests")
-     (:file "toolbox-tests")))))
+     (:file "toolbox-tests")
+     (:file "workspace-tests")))))
