@@ -38,6 +38,18 @@ Optionally pre-populate agents and models."
   "TUI entrypoint must be available."
   (is (nilclaw/tui:tui-entrypoint-available-p)))
 
+(test tui-seed-runtime-from-config-populates-models
+  "Interactive TUI local runtime should seed models/agents from config."
+  (let* ((runtime (nilclaw/gateway:make-gateway-runtime))
+         (session-key "seed-test"))
+    (multiple-value-bind (agent-id model-id)
+        (nilclaw/tui::tui-seed-runtime-from-config runtime session-key)
+      (is (stringp agent-id))
+      (is (stringp model-id))
+      (is (> (length model-id) 0))
+      (is (> (length (nilclaw/gateway:gateway-runtime-models runtime)) 0))
+      (is (> (length (nilclaw/gateway:gateway-runtime-agents runtime)) 0)))))
+
 ;;; ====================================================================
 ;;; Local TUI client lifecycle
 ;;; ====================================================================

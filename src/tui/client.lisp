@@ -856,6 +856,46 @@ INPUT-FN: optional (lambda (prompt) → string) for interactive picker input."
 ;;; Interactive TUI REPL (terminal UI)
 ;;; ====================================================================
 
+(declaim (ftype (function (nilclaw/gateway:gateway-runtime string)
+                          (values string string))
+                tui-seed-runtime-from-config))
+(defun tui-seed-runtime-from-config (runtime session-key)
+  "Seed RUNTIME with agents/models derived from NilClaw config.
+Returns (values default-agent-id default-model-id)."
+  (declare (type nilclaw/gateway:gateway-runtime runtime)
+           (type string session-key))
+  (let* ((cfg (handler-case (nilclaw/config:load-config nil)
+                (error () (nilclaw/config:make-default-config))))
+         (default-provider (or (nilclaw/config:config-default-provider cfg) "openrouter"))
+         (default-model (or (nilclaw/config:config-default-model cfg) ""))
+         (providers (or (nilclaw/config:list-configured-providers cfg) nil))
+         (model-ids nil))
+    ;; Seed model IDs from config defaults + configured providers.
+    (when (> (length default-model) 0)
+      (push default-model model-ids))
+    (dolist (p providers)
+      (when (and (stringp p) (> (length p) 0))
+        (push (format nil "~A/default" p) model-ids)))
+    (when (null model-ids)
+      (push (format nil "~A/default" default-provider) model-ids))
+    (setf model-ids (remove-duplicates (nreverse model-ids) :test #'string=))
+    (setf (nilclaw/gateway:gateway-runtime-models runtime)
+          (mapcar (lambda (model-id)
+                    (multiple-value-bind (provider model)
+                        (nilclaw/config:parse-model-string model-id)
+                      (nilclaw/gateway:make-gateway-model
+                       :id model-id
+                       :name (if (> (length model) 0) model model-id)
+                       :provider (if (> (length provider) 0) provider default-provider))))
+                  model-ids))
+    ;; Seed basic agent registry for picker usability.
+    (setf (nilclaw/gateway:gateway-runtime-agents runtime)
+          (list (nilclaw/gateway:make-gateway-agent :id "main" :display-name "Main")
+                (nilclaw/gateway:make-gateway-agent :id "default" :display-name "Default")))
+    ;; Ensure active session exists.
+    (nilclaw/gateway:gateway-ensure-session runtime session-key "TUI Session" "main")
+    (values "main" (first model-ids))))
+
 (declaim (ftype (function (&key (:gateway-url string)
                                 (:session-key string))
                           (values null &optional))
@@ -870,6 +910,12 @@ Connects to a running gateway and provides a terminal chat interface."
   ;; (in a full implementation, this would connect via WebSocket)
   (let* ((runtime (nilclaw/gateway:make-gateway-runtime))
          (client (make-local-tui-client runtime :session-key session-key)))
+    ;; Seed runtime registries from config so /models, /agents, /session pickers
+    ;; are useful immediately in local mode.
+    (multiple-value-bind (default-agent default-model)
+        (tui-seed-runtime-from-config runtime session-key)
+      (setf (local-tui-client-agent-id client) default-agent)
+      (setf (local-tui-client-model-id client) default-model))
     ;; Connect
     (unless (local-tui-connect client)
       (format *error-output* "[nilclaw-tui] Failed to connect~%")
