@@ -253,6 +253,30 @@
     (setf *callback-acceptor* nil))
   nil)
 
+(declaim (ftype (function (string string) (or null string)) parse-callback-url))
+(defun parse-callback-url (url expected-state)
+  "Parse a callback URL to extract the authorization code.
+   Validates the state parameter matches EXPECTED-STATE.
+   Returns the code or nil if invalid."
+  (declare (type string url expected-state))
+  (handler-case
+      (let* ((parsed (quri:parse-uri url))
+             (query (quri:uri-query parsed))
+             (params (when query (quri:url-decode-params query))))
+        (let ((code (cdr (assoc "code" params :test #'string=)))
+              (state (cdr (assoc "state" params :test #'string=))))
+          (cond
+            ((not code)
+             (format t "~&[nilclaw] No 'code' parameter found in URL~%")
+             nil)
+            ((not (string= state expected-state))
+             (format t "~&[nilclaw] State mismatch - possible CSRF attack~%")
+             nil)
+            (t code))))
+    (error (e)
+      (format t "~&[nilclaw] Failed to parse callback URL: ~A~%" e)
+      nil)))
+
 (declaim (ftype (function (&key (:timeout-seconds fixnum)) (or null string))
                 wait-for-callback))
 (defun wait-for-callback (&key (timeout-seconds 300))
@@ -432,42 +456,78 @@
     (return-from run-oauth-login
       (values nil (format nil "Unsupported OAuth provider: ~A" provider-name))))
   (format t "[nilclaw] Starting OAuth login for ~A...~%" provider-name)
-  ;; Generate flow
   (multiple-value-bind (auth-url verifier state)
       (create-authorization-flow)
-    ;; Start callback server
-    (handler-case
-        (start-callback-server state)
-      (error (e)
-        (return-from run-oauth-login
-          (values nil (format nil "Failed to start callback server: ~A" e)))))
-    (unwind-protect
-        (progn
-          (format t "~%Open this URL in your browser to authenticate:~%~%  ~A~%~%" auth-url)
-          (format t "Waiting for callback (timeout: ~D seconds)...~%" timeout-seconds)
-          (finish-output)
-          ;; Wait for callback
-          (let ((code (wait-for-callback :timeout-seconds timeout-seconds)))
+    (let ((server-started-p nil)
+          (code nil))
+      ;; Start callback server (may fail if port is in use), but still allow manual mode.
+      (handler-case
+          (progn
+            (start-callback-server state)
+            (setf server-started-p t))
+        (error (e)
+          (format t "~&[nilclaw] Could not start callback server: ~A~%" e)
+          (format t "[nilclaw] Falling back to manual paste mode~%")))
+      (unwind-protect
+          (progn
+            (format t "~%Open this URL in your browser to authenticate:~%~%  ~A~%~%" auth-url)
+            (finish-output)
+
+            (if server-started-p
+                (progn
+                  (format t "Waiting for callback (timeout: ~D seconds)...~%" timeout-seconds)
+                  (format t "Or paste the full callback URL if automatic redirect fails.~%")
+                  (finish-output)
+                  ;; Poll for either HTTP callback completion or pasted callback URL.
+                  (let ((start-time (get-universal-time)))
+                    (loop
+                      (when *callback-code*
+                        (setf code *callback-code*)
+                        (return))
+
+                      (let ((term-io (handler-case *terminal-io* (error () nil))))
+                        (when (and term-io (listen term-io))
+                          (let ((line (handler-case (read-line term-io nil nil) (error () nil))))
+                            (when (and (stringp line) (> (length line) 0))
+                              (let ((parsed-code (parse-callback-url line state)))
+                                (when parsed-code
+                                  (setf code parsed-code)
+                                  (return)))))))
+
+                      (when (> (- (get-universal-time) start-time) timeout-seconds)
+                        (return))
+                      (sleep 0.5))))
+                ;; No callback server: manual paste mode only.
+                (progn
+                  (format t "Paste the full callback URL after authenticating:~%")
+                  (finish-output)
+                  (let ((line (handler-case (read-line nil nil) (error () nil))))
+                    (when (stringp line)
+                      (setf code (parse-callback-url line state))))))
+
             (unless code
               (return-from run-oauth-login
-                (values nil "Timed out waiting for OAuth callback")))
-            (format t "[nilclaw] Received authorization code, exchanging for tokens...~%")
-            ;; Need dexador for HTTP
+                (values nil "No authorization code received")))
+
+            (format t "~&[nilclaw] Received authorization code, exchanging for tokens...~%")
+
+            ;; Ensure Dexador backend is enabled for HTTP token exchange.
             (let ((enable-fn (let ((pkg (find-package :nilclaw/provider)))
                                (when pkg
                                  (let ((sym (find-symbol "ENABLE-DEXADOR-BACKEND" pkg)))
                                    (when (and sym (fboundp sym))
                                      (symbol-function sym)))))))
-              (when enable-fn (funcall enable-fn)))
-            ;; Exchange code for tokens
+              (when enable-fn
+                (funcall enable-fn)))
+
             (multiple-value-bind (access refresh expires)
                 (exchange-authorization-code code verifier)
               (unless access
                 (return-from run-oauth-login
                   (values nil "Failed to exchange authorization code for tokens")))
-              ;; Store tokens
+
               (store-oauth-tokens provider-name access refresh expires)
-              (format t "[nilclaw] Authentication successful! Tokens stored in ~~/.nilclaw/auth-profiles.json~%")
-              (values t "Authentication successful"))))
-      ;; Always stop the server
-      (stop-callback-server))))
+              (format t "~&[nilclaw] Authentication successful! Tokens stored in ~~/.nilclaw/auth-profiles.json~%")
+              (values t "Authentication successful")))
+        (when server-started-p
+          (stop-callback-server))))))
