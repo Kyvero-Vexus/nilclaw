@@ -260,7 +260,8 @@
    Returns the code or nil if invalid."
   (declare (type string url expected-state))
   (handler-case
-      (let* ((parsed (quri:parse-uri url))
+      (let* ((trimmed (string-trim '(#\Space #\Tab #\Newline #\Return) url))
+             (parsed (quri:uri trimmed))
              (query (quri:uri-query parsed))
              (params (when query (quri:url-decode-params query))))
         (let ((code (cdr (assoc "code" params :test #'string=)))
@@ -269,7 +270,7 @@
             ((not code)
              (format t "~&[nilclaw] No 'code' parameter found in URL~%")
              nil)
-            ((not (string= state expected-state))
+            ((not (and (stringp state) (string= state expected-state)))
              (format t "~&[nilclaw] State mismatch - possible CSRF attack~%")
              nil)
             (t code))))

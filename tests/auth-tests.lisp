@@ -164,6 +164,13 @@
               (fail "HTTP request to callback failed: ~A" e))))
       (nilclaw/auth:stop-callback-server))))
 
+(test parse-callback-url-extracts-code
+  "Manual pasted callback URL should parse into code when state matches."
+  (let* ((url "http://localhost:1455/auth/callback?code=abc123&state=test-state-xyz")
+         (code (nilclaw/auth::parse-callback-url url "test-state-xyz")))
+    (is (stringp code))
+    (is (string= "abc123" code))))
+
 ;;; ─── Constants Tests ─────────────────────────────────────────────────
 
 (test oauth-constants-correct
