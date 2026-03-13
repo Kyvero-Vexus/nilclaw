@@ -29,4 +29,18 @@
            #:local-tui-client-runtime
            #:local-tui-client-session-key
            #:local-tui-client-connected-p
-           #:local-tui-client-connection))
+           #:local-tui-client-connection
+           ;; Phase 1 parity: state accessors
+           #:local-tui-client-agent-id
+           #:local-tui-client-model-id
+           #:local-tui-client-deliver-p
+           #:local-tui-client-think-level
+           #:local-tui-client-verbose-mode
+           #:local-tui-client-reasoning-mode
+           ;; Slash command dispatch
+           #:tui-handle-slash-command
+           ;; Display helpers
+           #:tui-format-status
+           #:tui-format-footer
+           #:tui-format-history-entry
+           #:tui-format-help))
