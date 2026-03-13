@@ -5,6 +5,9 @@
 
 set -euo pipefail
 
+# Ensure OpenSSL libraries are findable for Ironclad
+export LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}:/usr/lib/x86_64-linux-gnu"
+
 # Default to ~/projects/nilclaw if not set and not in project tree
 if [ -z "${NILCLAW_ROOT:-}" ]; then
     script_dir="$(cd "$(dirname "$0")" && pwd)"
