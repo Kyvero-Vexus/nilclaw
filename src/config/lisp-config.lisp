@@ -205,23 +205,27 @@
 
 ;;; Top-level config loading (tries Lisp first, falls back to JSON)
 
-(declaim (ftype (function (&optional (or null string)) config) load-config))
+(declaim (ftype (function (&optional (or null string)) (values config &optional)) load-config))
 (defun load-config (&optional explicit-path)
   "Load configuration from file. Searches default paths if no path given.
-   Supports .lisp (native) and .json (legacy) formats."
+   Supports .lisp (native) and .json (legacy) formats.
+   Returns (values config path) where path is the resolved config file,
+   or (values default-config nil) if no config file was found."
   (declare (type (or null string) explicit-path))
   (let ((path (find-config-file explicit-path)))
     (unless path
-      (return-from load-config (make-default-config)))
+      (return-from load-config (values (make-default-config) nil)))
     (let ((ext (pathname-type path)))
-      (cond
-        ((member ext '("lisp" "cl" "sexp") :test #'string-equal)
-         (load-lisp-config path))
-        ((string-equal ext "json")
-         ;; Fall back to JSON parser for migration period
-         (parse-config-from-string (uiop:read-file-string path)))
-        (t
-         (error "Unknown config file type: ~A (expected .lisp or .json)" ext))))))
+      (values
+       (cond
+         ((member ext '("lisp" "cl" "sexp") :test #'string-equal)
+          (load-lisp-config path))
+         ((string-equal ext "json")
+          ;; Fall back to JSON parser for migration period
+          (parse-config-from-string (uiop:read-file-string path)))
+         (t
+          (error "Unknown config file type: ~A (expected .lisp or .json)" ext)))
+       (namestring path)))))
 
 ;;; Config serialization to s-expression
 
