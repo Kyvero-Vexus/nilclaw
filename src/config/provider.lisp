@@ -183,18 +183,25 @@
                 make-provider-runtime-from-config))
 (defun make-provider-runtime-from-config (cfg provider-name &key (model nil model-p))
   "Create a provider-runtime struct from config for the named provider.
-   For OAuth providers, reads access token from OpenClaw's auth-profiles.json."
+   For OAuth providers, reads access token from OpenClaw's auth-profiles.json.
+   For local providers (ollama, lmstudio), no authentication is required."
   (declare (type config cfg)
            (type string provider-name))
   (let* ((pconfig (get-provider-config cfg provider-name))
-         (auth-profiles (config-auth-profiles cfg))
-         (oauth-profile (find provider-name auth-profiles
-                              :key (lambda (p) (getf p :provider))
-                              :test #'string=))
+         ;; nilclaw-viz fix: Check if this is a local provider that doesn't need auth
+         (local-provider-p (member provider-name '("ollama" "lmstudio")
+                              :test #'string-equal))
+         (auth-profiles (unless local-provider-p (config-auth-profiles cfg)))
+         (oauth-profile (and auth-profiles
+                          (find provider-name auth-profiles
+                                :key (lambda (p) (getf p :provider))
+                                :test #'string=)))
          (uses-oauth (and oauth-profile (string= (getf oauth-profile :mode) "oauth")))
-         (api-key (if uses-oauth
-                      (get-oauth-access-token provider-name)
-                      (when pconfig (getf pconfig :api-key))))
+         ;; For local providers, use dummy API key since they don't require auth
+         (api-key (cond
+                    (local-provider-p "local-no-auth-required")
+                    (uses-oauth (get-oauth-access-token provider-name))
+                    (t (when pconfig (getf pconfig :api-key)))))
          (base-url (when pconfig (getf pconfig :base-url)))
          (reliability (config-reliability cfg))
          (max-retries (getf reliability :provider-retries 2)))
@@ -209,7 +216,7 @@
                                (and model-p nil)
                                (format nil "~a/default" provider-name))
                     :max-retries max-retries)
-           (not (null pconfig)))
+           (or (not (null pconfig)) local-provider-p))
           (values nil nil)))))
 
 (declaim (ftype (function (config string) string) get-provider-transport))
