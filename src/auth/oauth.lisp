@@ -224,25 +224,32 @@
 
 (declaim (ftype (function (string) t) start-callback-server))
 (defun start-callback-server (expected-state)
-  "Start the localhost callback server on port 1455.
+  "Start the localhost callback server, preferring port 1455.
+   If port 1455 is in use, tries an ephemeral port instead.
    EXPECTED-STATE is used to validate the OAuth state parameter."
   (declare (type string expected-state))
   (setf *callback-code* nil
         *callback-state* nil
         *expected-state* expected-state)
-  (let ((acceptor (make-instance 'hunchentoot:easy-acceptor
-                                 :port +callback-port+
-                                 :address "127.0.0.1")))
-    ;; Suppress Hunchentoot's default logging
-    (setf (hunchentoot:acceptor-message-log-destination acceptor) nil
-          (hunchentoot:acceptor-access-log-destination acceptor) nil)
-    ;; Set up the dispatch
-    (setf hunchentoot:*dispatch-table*
-          (list (hunchentoot:create-prefix-dispatcher "/auth/callback"
-                                                      #'callback-handler)))
-    (hunchentoot:start acceptor)
-    (setf *callback-acceptor* acceptor)
-    acceptor))
+  (flet ((try-start (port)
+           (let ((acceptor (make-instance 'hunchentoot:easy-acceptor
+                                          :port port
+                                          :address "127.0.0.1")))
+             (setf (hunchentoot:acceptor-message-log-destination acceptor) nil
+                   (hunchentoot:acceptor-access-log-destination acceptor) nil)
+             (setf hunchentoot:*dispatch-table*
+                   (list (hunchentoot:create-prefix-dispatcher "/auth/callback"
+                                                               #'callback-handler)))
+             (hunchentoot:start acceptor)
+             (setf *callback-acceptor* acceptor)
+             acceptor)))
+    ;; Try preferred port first, fall back to ephemeral (nilclaw-10v fix)
+    (handler-case (try-start +callback-port+)
+      (usocket:address-in-use-error ()
+        (format *error-output*
+                "~&[nilclaw] Warning: port ~D in use, using ephemeral port for auth callback.~%"
+                +callback-port+)
+        (try-start 0)))))
 
 (declaim (ftype (function () null) stop-callback-server))
 (defun stop-callback-server ()

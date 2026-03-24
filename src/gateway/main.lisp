@@ -65,11 +65,19 @@
   ;; Install signal handlers
   (install-signal-handlers)
 
-  ;; Start HTTP server
+  ;; Start HTTP server (nilclaw-w2w fix: handle port-in-use gracefully)
   (let* ((gw (nilclaw/config:config-gateway *config*))
          (port (or (getf gw :port) *default-http-port*))
          (runtime (make-gateway-runtime :port port)))
-    (start-http-server :port port :runtime runtime)
+    (handler-case
+        (start-http-server :port port :runtime runtime)
+      (usocket:address-in-use-error ()
+        (format *error-output* "~&[nilclaw] Error: port ~D is already in use.~%" port)
+        (write-string "[nilclaw] Stop the other process, or change the port in ~/.nilclaw/init.lisp:" *error-output*)
+        (terpri *error-output*)
+        (format *error-output* "[nilclaw]   (configure :gateway (:port ~D))~%" (1+ port))
+        (nilclaw/channel:stop-all-channels *channel-manager*)
+        (uiop:quit 1)))
     (format t "[nilclaw] Gateway listening on ~A:~A~%"
             (getf gw :host) port))
   (format t "[nilclaw] NilClaw is ready.~%")
