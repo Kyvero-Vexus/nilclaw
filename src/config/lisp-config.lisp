@@ -205,7 +205,7 @@
 
 ;;; Top-level config loading (tries Lisp first, falls back to JSON)
 
-(declaim (ftype (function (&optional (or null string)) (values config &optional)) load-config))
+(declaim (ftype (function (&optional (or null string)) (values config (or null string))) load-config))
 (defun load-config (&optional explicit-path)
   "Load configuration from file. Searches default paths if no path given.
    Supports .lisp (native) and .json (legacy) formats.
