@@ -148,3 +148,31 @@ For more details, see README.md and docs/QUICKSTART.md.
 - If push fails, resolve and retry until it succeeds
 
 <!-- END BEADS INTEGRATION -->
+
+## Contributing via Pull Requests
+
+Use this flow for all contributions.
+
+1. **Sync first**: start from the latest `main`.
+2. **Create a branch**: use a descriptive name like `feat/<topic>` or `fix/<topic>`.
+3. **Implement + verify**: keep changes focused; run tests/lint before opening a PR.
+4. **Commit clearly**: use concise, descriptive commit messages.
+5. **Push your branch**: never push directly to `main`.
+6. **Open a Pull Request** against `main` with:
+   - a clear summary of what changed
+   - test/verification notes
+   - linked issues (if applicable)
+7. **Address review feedback** and keep the branch updated until merge.
+
+### Quick PR commands (GitHub CLI)
+
+```bash
+git checkout main
+git pull --ff-only
+git checkout -b feat/my-change
+# make changes, run tests
+git add -A
+git commit -m "feat: describe change"
+git push -u origin feat/my-change
+gh pr create --base main --fill
+```
